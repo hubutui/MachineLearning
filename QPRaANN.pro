@@ -25,10 +25,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        mainwindow.cpp
+        mainwindow.cpp \
+    dialogglcm.cpp
 
 HEADERS += \
-        mainwindow.h
+        mainwindow.h \
+    dialogglcm.h
 
 FORMS += \
-        mainwindow.ui
+        mainwindow.ui \
+    dialogglcm.ui
