@@ -174,6 +174,12 @@ void MainWindow::glcm(const int &distance, const int &theta, const int &grayLeve
     double contrast = getContrast(glcmImgNorm);
     double correlation = getCorrelation(glcmImgNorm);
     double entropy = getEntropy(glcmImgNorm);
+    // pop up a messagebox to show result
+    QMessageBox resultBox;
+    QString resultString = tr("ASM:\t\t%1\nIDM:\t\t%2\nContrast:\t\t%3\nCorrelation:\t%4\nEntropy:\t\t%5").arg(ASM).arg(IDM).arg(contrast).arg(correlation).arg(entropy);
+    resultBox.setText(resultString);
+    resultBox.setWindowTitle(tr("Texture Features"));
+    resultBox.exec();
 }
 
 template <typename T>
