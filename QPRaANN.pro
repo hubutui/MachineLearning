@@ -35,3 +35,6 @@ HEADERS += \
 FORMS += \
         mainwindow.ui \
     dialogglcm.ui
+
+unix: CONFIG += link_pkgconfig
+unix: PKGCONFIG += armadillo

@@ -152,9 +152,7 @@ void MainWindow::glcm(const int &distance, const int &theta, const int &grayLeve
 
     // make sure input image is grayscale
     if (!isGrayscale(img)) {
-        cimg_forXY(img, x, y) {
-            grayImg(x, y) = rgbToGray(img(x, y, 0), img(x, y, 1), img(x, y, 2));
-        }
+        grayImg = rgbToGray(img);
     } else {
         grayImg = img;
     }
@@ -334,20 +332,15 @@ double MainWindow::getCorrelation(const CImg<T> &img)
 void MainWindow::on_actionFractal_dimension_triggered()
 {
     CImg<double> img(fileName.toStdString().data());
-    CImg<int> inputImage(img.width(), img.height());
+    CImg<int> inputImage = rgbToGray(img);
 
     // convert to binary image with threshold = 128
     double threshold = 128.0f;
-    if (!isGrayscale(img)) {
-        cimg_forXY(inputImage, x, y) {
-            inputImage(x, y) = rgbToGray(img(x, y, 0), img(x, y, 1), img(x, y, 2)) > threshold ? 1 : 0;
-        }
-    } else {
-        cimg_forXY(inputImage, x, y) {
-            inputImage(x, y) = img(x, y) > threshold ? 1 : 0;
-        }
+    cimg_forXY(inputImage, x, y) {
+        inputImage(x, y) = inputImage(x, y) > threshold ? 1 : 0;
     }
 
+    // 计算分形维度
     double dim = boxcount(cimgToMat(inputImage));
     // pop up a messagebox to show result
     QMessageBox resultBox;
@@ -418,4 +411,36 @@ double MainWindow::boxcount(const Mat<T> &img)
     vec P = polyfit(x, y, 1);
 
     return P(0);
+}
+
+// pad image with zeros from size MxN to M'xM',
+// where M' = 2^K
+template<typename T>
+CImg<T> MainWindow::padImage(const CImg<T> &img)
+{
+    // if width == height, just scale
+    if (img.width() == img.height()) {
+        unsigned int M = pow(2, ceil(log2(img.width())));
+        return img.get_resize(M, M, img.depth(), img.spectrum(), 5);
+    } else {
+        // width != height, pad with zeros
+        unsigned int M = pow(2, ceil(log2(img.width() > img.height() ? img.width() : img.height())));
+        return img.get_resize(M, M, img.depth(), img.spectrum(), 0);
+    }
+}
+
+template<typename T>
+CImg<T> MainWindow::rgbToGray(const CImg<T> &img)
+{
+    CImg<T> result(img.width(), img.height());
+
+    if (img.spectrum() == 3) {
+        cimg_forXY(img, x, y) {
+            result(x, y) = rgbToGray(img(x, y, 0), img(x, y, 1), img(x, y, 2));
+        }
+    } else {
+        result = img;
+    }
+
+    return result;
 }

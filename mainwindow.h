@@ -62,10 +62,11 @@ private:
     void updateOutScene(const QString &fileName);
     inline int rgbToGray(const int &r, const int &g, const int &b);
     template <typename T>
+    CImg<T> rgbToGray(const CImg<T> &img);
+    template <typename T>
     inline bool isGrayscale(const CImg<T> &img);
     template <typename T>
     CImg<T> getGlcm(const CImg<T> &img, const int &distance, const int &theta, const int &grayLevel);
-
     template <typename T>
     double getASM(const CImg<T> &img);
     template <typename T>
@@ -76,10 +77,12 @@ private:
     double getCorrelation(const CImg<T> &img);
     template <typename T>
     double getEntropy(const CImg<T> &img);
-    template<typename T>
+    template <typename T>
     Mat<T> cimgToMat(const CImg<T> &img);
-    template<typename T>
+    template <typename T>
     double boxcount(const Mat<T> &img);
+    template <typename T>
+    CImg<T> padImage(const CImg<T> &img);
 };
 
 #endif // MAINWINDOW_H
