@@ -6,6 +6,8 @@
 #include <QGraphicsScene>
 #include <QPixmap>
 #include <QGraphicsPixmapItem>
+#include <armadillo>
+using namespace arma;
 
 #define cimg_display 0
 #include <CImg.h>
@@ -37,6 +39,8 @@ private slots:
     void on_actionGLCM_triggered();
 
     void glcm(const int &distance, const int &theta, const int &grayLevel);
+
+    void on_actionFractal_dimension_triggered();
 
 private:
     Ui::MainWindow *ui;
@@ -72,6 +76,10 @@ private:
     double getCorrelation(const CImg<T> &img);
     template <typename T>
     double getEntropy(const CImg<T> &img);
+    template<typename T>
+    Mat<T> cimgToMat(const CImg<T> &img);
+    template<typename T>
+    double boxcount(const Mat<T> &img);
 };
 
 #endif // MAINWINDOW_H

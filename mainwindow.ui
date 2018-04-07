@@ -61,6 +61,7 @@
      <string>&amp;Texture</string>
     </property>
     <addaction name="actionGLCM"/>
+    <addaction name="actionFractal_dimension"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Edit"/>
@@ -110,6 +111,11 @@
    </property>
    <property name="toolTip">
     <string>ay-level co-occurrence matrix</string>
+   </property>
+  </action>
+  <action name="actionFractal_dimension">
+   <property name="text">
+    <string>Fractal dimension</string>
    </property>
   </action>
  </widget>

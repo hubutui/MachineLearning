@@ -249,7 +249,6 @@ double MainWindow::getEntropy(const CImg<T> &img)
     double result = 0.0f;
 
     cimg_forXY(img, x, y) {
-//        qDebug() << "img(" << x << "," << y << "):" << img(x, y) << endl;
         result += img(x, y)*log2(img(x, y) + DBL_EPSILON);
     }
 
@@ -325,10 +324,98 @@ double MainWindow::getCorrelation(const CImg<T> &img)
         varianceY += (y - meanY)*(y - meanY)*Py(x, y);
     }
 
-    qDebug() << "variance:" << varianceX << varianceY << endl;
     cimg_forXY(img, x, y) {
         result += (x - meanX)*(y - meanY)*img(x, y)/(varianceX*varianceY + DBL_EPSILON);
     }
 
     return result;
+}
+
+void MainWindow::on_actionFractal_dimension_triggered()
+{
+    CImg<double> img(fileName.toStdString().data());
+    CImg<int> inputImage(img.width(), img.height());
+
+    // convert to binary image with threshold = 128
+    double threshold = 128.0f;
+    if (!isGrayscale(img)) {
+        cimg_forXY(inputImage, x, y) {
+            inputImage(x, y) = rgbToGray(img(x, y, 0), img(x, y, 1), img(x, y, 2)) > threshold ? 1 : 0;
+        }
+    } else {
+        cimg_forXY(inputImage, x, y) {
+            inputImage(x, y) = img(x, y) > threshold ? 1 : 0;
+        }
+    }
+
+    double dim = boxcount(cimgToMat(inputImage));
+    // pop up a messagebox to show result
+    QMessageBox resultBox;
+    QString resultString = tr("fractal dimension: %1").arg(dim);
+    resultBox.setText(resultString);
+    resultBox.setWindowTitle(tr("Texture Features"));
+    resultBox.exec();
+}
+
+// convert 2D grayscale image to a matrix
+template<typename T>
+Mat<T> MainWindow::cimgToMat(const CImg<T> &img)
+{
+    Mat<T> result(img.width(), img.height());
+
+    cimg_forXY(img, x, y) {
+        result(x, y) = img(x, y);
+    }
+
+    return result;
+}
+
+// 根据 http://m2matlabdb.ma.tum.de/files.jsp?MC_ID=5&SC_ID=13 的 MATLAB 版本修改而来
+// 缺点是对于自相似程度较低的图像的结果误差较大
+template<typename T>
+double MainWindow::boxcount(const Mat<T> &img)
+{
+    Mat<T> c = img;
+    int width = c.n_rows;
+    int p = log(width)/log(2);
+    Col<T> n(p+1, fill::zeros);
+    n(p) = accu(c);
+
+    for (int g = p-1; g >= 0; --g) {
+        int siz = pow(2, p-g);
+        int siz2 = round(siz/2);
+        for (int i = 0; i < width - siz + 1; i += siz) {
+            for (int j = 0; j < width - siz + 1; j += siz) {
+                c(i, j) = c(i, j) || c(i+siz2, j) || c(i, j+siz2) || c(i+siz2, j+siz2);
+            }
+        }
+        for (int u = 0; u < width - siz + 1; u += siz) {
+            for (int v = 0; v < width - siz + 1; v += siz) {
+                n(g) += c(u, v);
+            }
+        }
+    }
+    // 倒序 n = n(end:-1:1)
+    for (int i = 0; i < n.n_elem/2; ++i) {
+        T tmp = n(i);
+        n(i) = n(n.n_elem - i - 1);
+        n(n.n_elem - i - 1) = tmp;
+    }
+    Col<T> r(n.n_elem);
+    for (int i = 0; i < n.n_elem; ++i) {
+        r(i) = pow(2, i);
+    }
+    // polyfit
+    vec x(r.n_elem);
+    for (int i = 0; i < x.n_elem; ++i) {
+        x(i) = -log(r(i));
+    }
+
+    vec y(n.n_elem);
+    for (int i = 0; i < x.n_elem; ++i) {
+        y(i) = log(n(i));
+    }
+    vec P = polyfit(x, y, 1);
+
+    return P(0);
 }
