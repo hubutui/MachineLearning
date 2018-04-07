@@ -332,7 +332,8 @@ double MainWindow::getCorrelation(const CImg<T> &img)
 void MainWindow::on_actionFractal_dimension_triggered()
 {
     CImg<double> img(fileName.toStdString().data());
-    CImg<int> inputImage = rgbToGray(img);
+    // pad image, and then convert to grayscale
+    CImg<int> inputImage = rgbToGray(padImage(img));
 
     // convert to binary image with threshold = 128
     double threshold = 128.0f;
