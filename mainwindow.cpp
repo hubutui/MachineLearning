@@ -70,6 +70,114 @@ int MainWindow::rgbToGray(const int &r, const int &g, const int &b)
     return (r * 11 + g * 16 + b * 5)/32;
 }
 
+void MainWindow::fisherTrain(const mat &data, const uvec &label, vec &weight, vec &dataProj, double &threshold)
+{
+    // 根据 label 获取类别 1 和类别 2 的数据，label 取值为 0 的为类别 1，取值为 1 的为类别 2
+    // find 函数返回满足逻辑表达式的 ind
+    uvec inds1 = arma::find(label == 0);
+    uvec inds2 = arma::find(label == 1);
+    // 注意到 data 的 size 为 Nx2 的矩阵
+    // 对应着 label，应该取出 find 返回的 ind 对应的行
+    mat data1 = data.rows(inds1);
+    mat data2 = data.rows(inds2);
+    // 本来想这样子写简单一点的，但是实际上后面还是会用到 find 函数
+    // 索性全部改掉了
+//    // 这里写得简单一点，类别 1 和类别 2 各占一半
+//    // 并且就是输入数据的前一半为类别1，后一半为类别2
+//    mat data1 = data.rows(0, data.n_rows/2 - 1);
+//    mat data2 = data.rows(data.n_rows/2, data.n_rows - 1);
+
+    // 计算均值
+    mat mu1 = arma::mean(data1);
+    mat mu2 = arma::mean(data2);
+    // 计算散度矩阵，实际上与协方差矩阵只相差一个系数
+    // 这里直接用协方差矩阵进行计算
+    mat S1 = cov(data1);
+    mat S2 = cov(data2);
+    // 计算变换矩阵
+    weight = inv(S1 + S2)*(mu1 - mu2).t();
+    // 计算投影后的data
+    dataProj = data*weight;
+
+    // 下面利用投影后的 data 进行计算阈值 threshold
+    // 首先求出投影后的两类数据
+    vec dataProj1 = dataProj.rows(inds1);
+    vec dataProj2 = dataProj.rows(inds2);
+    // 以及两类数据的数量
+    uword n1 = dataProj1.n_rows;
+    uword n2 = dataProj2.n_rows;
+    // 计算均值
+    mu1 = arma::mean(dataProj1);
+    mu2 = arma::mean(dataProj2);
+    // 散度矩阵
+    S1 = cov(dataProj1);
+    S2 = cov(dataProj2);
+    // 这部分还不知道什么意思，照抄的
+    double a = S2(0) - S1(0);
+    double b = -2*(mu1(0)*S2(0) - mu2(0)*S1(0));
+    double c = S2(0)*mu1(0)*mu1(0) - S1(0)*mu2(0)*mu2(0) - 2*S1(0)*S2(0)*log(double(n1)/n2);
+
+    double delta = b*b - 4*a*c;
+
+    if (delta < 0) {
+        QMessageBox::critical(this, tr("Error!"), tr("Something is wrong"));
+        return;
+    } else {
+        // 利用求根公式解一元二次方程
+        double d = sqrt(delta);
+        double t1 = (-b + d)/(2*a);
+        double t2 = (-b - d)/(2*a);
+
+        if (pow(t1 - mu1(0), 2) < pow(t2 - mu1(0), 2)) {
+            threshold = t1;
+        } else {
+            threshold = t2;
+        }
+    }
+}
+
+void MainWindow::fisherTesting(const mat &data, const vec &weight, const double &threshold, const uvec &label,
+                               uvec &predictedLabel, double &precision, double &recall, double &accuracy, double &F1)
+{
+    vec dataProj = data*weight;
+    predictedLabel = dataProj < threshold;
+
+    // true positive, true negative
+    // fasle positive, false negative
+
+
+    double tp = sum(label == 1 && predictedLabel == 1);
+    double tn = sum(label == 0 && predictedLabel == 0);
+    double fp = sum(label == 0 && predictedLabel == 1);
+    double fn = sum(label == 1 && predictedLabel == 0);
+
+    precision = tp / (tp + fp);
+    recall = tp / (tp + fn);
+    accuracy = (tp + tn) / (tp + tn + fp + fn);
+    F1 = 2 * precision * recall / (precision + recall);
+}
+
+// 读取 csv 文件
+// 将结果按行优先顺序存储到 data 中
+void MainWindow::readCsv(const QString &fileName, QVector<double> &data)
+{
+    QFile file(fileName);
+    file.open(QIODevice::ReadOnly);
+    // 初始化一个 QTextStream 流
+    QTextStream stream(&file);
+
+    while (!stream.atEnd()) {
+        // 将每行读取并存入到一个字符串中
+        QString str = stream.readLine();
+        // 将字符串按照分隔符 ',' 分割为一个字符串列表
+        QStringList list = str.split(',');
+
+        for (int i = 0; i < list.length(); ++i) {
+            data.append(list.at(i).toDouble());
+        }
+    }
+}
+
 void MainWindow::on_action_Open_triggered()
 {
     QString imagePath = QFileDialog::getOpenFileName(
@@ -390,28 +498,27 @@ double MainWindow::boxcount(const Mat<T> &img)
         }
     }
     // 倒序 n = n(end:-1:1)
-    for (int i = 0; i < n.n_elem/2; ++i) {
+    for (uword i = 0; i < n.n_elem/2; ++i) {
         T tmp = n(i);
         n(i) = n(n.n_elem - i - 1);
         n(n.n_elem - i - 1) = tmp;
     }
     Col<T> r(n.n_elem);
-    for (int i = 0; i < n.n_elem; ++i) {
+    for (uword i = 0; i < n.n_elem; ++i) {
         r(i) = pow(2, i);
     }
     // polyfit
     vec x(r.n_elem);
-    for (int i = 0; i < x.n_elem; ++i) {
+    for (uword i = 0; i < x.n_elem; ++i) {
         x(i) = -log(r(i));
     }
 
     vec y(n.n_elem);
-    for (int i = 0; i < x.n_elem; ++i) {
+    for (uword i = 0; i < x.n_elem; ++i) {
         y(i) = log(n(i));
     }
-    vec P = polyfit(x, y, 1);
 
-    return P(0);
+    return mean(diff(y)/diff(x));
 }
 
 // pad image with zeros from size MxN to M'xM',
@@ -441,6 +548,51 @@ CImg<T> MainWindow::rgbToGray(const CImg<T> &img)
         }
     } else {
         result = img;
+    }
+
+    return result;
+}
+
+void MainWindow::on_actionFisher_triggered()
+{
+    mat data;
+    QString dataFile = "iris.txt";
+    data.load(dataFile.toStdString().data());
+
+    mat features = data.cols(0, 1);
+    vec tmp = data.col(2);
+    uvec label(tmp.size());
+
+    for (uword i = 0; i < tmp.size(); ++i) {
+        label(i) = tmp(i);
+    }
+
+    std::cout << "特征：" << endl;
+    std::cout << features << std::endl;
+    std::cout << "标签：" << std::endl;
+    std::cout << label << std::endl;
+
+    // 存储输出结果
+    vec weight(features.n_cols);
+    vec dataProj(label.size());
+    double threshold;
+
+    fisherTrain(features, label, weight, dataProj, threshold);
+
+    // 存储测试测试结果
+    uvec predictedLabel(label.size());
+    double precision, recall, accuracy, F1;
+    fisherTesting(features, weight, threshold, label, predictedLabel, precision, recall, accuracy, F1);
+}
+
+// convert arma::Col to QVector
+template<typename T>
+Col<T> MainWindow::QVectorToCol(const QVector<T> &vector)
+{
+    Col<T> result(vector.length());
+
+    for (int i = 0; i < vector.length(); ++i) {
+        result(i) = vector.at(i);
     }
 
     return result;

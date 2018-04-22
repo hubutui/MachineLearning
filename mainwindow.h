@@ -6,8 +6,12 @@
 #include <QGraphicsScene>
 #include <QPixmap>
 #include <QGraphicsPixmapItem>
+#include <QFile>
+
 #include <armadillo>
 using namespace arma;
+#define ROW 200
+#define COL 2
 
 #define cimg_display 0
 #include <CImg.h>
@@ -41,6 +45,8 @@ private slots:
     void glcm(const int &distance, const int &theta, const int &grayLevel);
 
     void on_actionFractal_dimension_triggered();
+
+    void on_actionFisher_triggered();
 
 private:
     Ui::MainWindow *ui;
@@ -78,11 +84,21 @@ private:
     template <typename T>
     double getEntropy(const CImg<T> &img);
     template <typename T>
-    Mat<T> cimgToMat(const CImg<T> &img);
+    arma::Mat<T> cimgToMat(const CImg<T> &img);
     template <typename T>
-    double boxcount(const Mat<T> &img);
+    double boxcount(const arma::Mat<T> &img);
     template <typename T>
     CImg<T> padImage(const CImg<T> &img);
+
+    void fisherTrain(const mat &data, const uvec &label, vec &weight, vec &dataProj, double &threshold);
+
+    void fisherTesting(const mat &data, const vec &weight, const double &threshold, const uvec &label,
+                       uvec &predictedLabel, double &precision, double &recall, double &accuracy, double &F1);
+
+    void readCsv(const QString &fileName, QVector<double> &data);
+
+    template <typename T>
+    Col<T> QVectorToCol(const QVector<T> &vector);
 };
 
 #endif // MAINWINDOW_H

@@ -63,9 +63,16 @@
     <addaction name="actionGLCM"/>
     <addaction name="actionFractal_dimension"/>
    </widget>
+   <widget class="QMenu" name="menuLDA">
+    <property name="title">
+     <string>LDA</string>
+    </property>
+    <addaction name="actionFisher"/>
+   </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Edit"/>
    <addaction name="menu_Texture"/>
+   <addaction name="menuLDA"/>
    <addaction name="menu_Help"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
@@ -116,6 +123,11 @@
   <action name="actionFractal_dimension">
    <property name="text">
     <string>Fractal dimension</string>
+   </property>
+  </action>
+  <action name="actionFisher">
+   <property name="text">
+    <string>Fisher</string>
    </property>
   </action>
  </widget>
