@@ -8,6 +8,15 @@
 #include <QGraphicsPixmapItem>
 #include <QFile>
 
+// 包含 QtCharts，ui 文件是不能直接编辑的，ui 文件生成的代码会用到 QtCharts
+// 而 mainwindow 对应的 ui 文件生成的代码会包含头文件 mainwindow.h
+// 因此可以将 QtCharts 的头文件包含写在这里
+#include <QtCharts>
+// 下面两句是等价的
+// using namespace QtCharts
+QT_CHARTS_USE_NAMESPACE
+
+
 #include <armadillo>
 using namespace arma;
 #define ROW 200
@@ -51,9 +60,9 @@ private slots:
 private:
     Ui::MainWindow *ui;
 
-    QGraphicsScene *inScene, *outScene;
-    QPixmap *inPixmap, *outPixmap;
-    QGraphicsPixmapItem *inPixmapItem, *outPixmapItem;
+    QGraphicsScene *inScene;
+    QPixmap *inPixmap;
+    QGraphicsPixmapItem *inPixmapItem;
     QString imageFormat = tr("All Images (*.bmp *.cur *.gif *.icns *.ico *.jp2 *.jpeg *.jpg *.mng *.pbm *.pgm *.png *.ppm *.svg *.svgz *.tga *.tif *.tiff *.wbmp *.webp *.xbm *.xpm);;");
     QString fileName;
     QString saveFileName;
@@ -65,7 +74,6 @@ private:
     void cleanImage(void);
     void setFileName(const QString &fileName);
     void setSaveFileName(const QString &saveFileName);
-    void updateOutScene(const QString &fileName);
     inline int rgbToGray(const int &r, const int &g, const int &b);
     template <typename T>
     CImg<T> rgbToGray(const CImg<T> &img);

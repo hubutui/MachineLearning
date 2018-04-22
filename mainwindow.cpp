@@ -15,15 +15,11 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     inScene = new QGraphicsScene;
-    outScene = new QGraphicsScene;
 
     ui->graphicsView_in->setScene(inScene);
-    ui->graphicsView_out->setScene(outScene);
 
     inPixmap = new QPixmap;
-    outPixmap = new QPixmap;
     inPixmapItem = inScene->addPixmap(*inPixmap);
-    outPixmapItem = outScene->addPixmap(*outPixmap);
 
     resultFileName = "tmp.tiff";
 }
@@ -42,7 +38,6 @@ void MainWindow::on_action_Quit_triggered()
 void MainWindow::cleanImage()
 {
     inScene->clear();
-    outScene->clear();
 }
 
 void MainWindow::setFileName(const QString &fileName)
@@ -55,14 +50,6 @@ void MainWindow::setSaveFileName(const QString &saveFileName)
     this->saveFileName = saveFileName;
 }
 
-void MainWindow::updateOutScene(const QString &fileName)
-{
-    qDebug() << "repaint out image." << endl;
-    outScene->clear();
-    outPixmap->load(fileName);
-    outPixmapItem = outScene->addPixmap(*outPixmap);
-    outScene->setSceneRect(QRectF(outPixmap->rect()));
-}
 
 // rgb to gray scale, adapt from qt's function
 int MainWindow::rgbToGray(const int &r, const int &g, const int &b)
@@ -208,29 +195,12 @@ void MainWindow::on_action_Open_triggered()
 // save output image
 void MainWindow::on_action_Save_triggered()
 {
-    if (!saveFileName.isEmpty()) {
-        outPixmapItem->pixmap().save(saveFileName);
-    } else {
-        on_actionSave_as_triggered();
-    }
 }
 
 // save output image as
 void MainWindow::on_actionSave_as_triggered()
 {
     QString savePath = QFileDialog::getSaveFileName(this, tr("Save image"), QDir::homePath(), imageFormat);
-
-    if (!savePath.isEmpty()) {
-        QFile file(savePath);
-
-        if (!file.open(QIODevice::WriteOnly)) {
-            QMessageBox::critical(this, tr("Error!"), tr("Unable to save image!"));
-            return;
-        }
-
-        outPixmapItem->pixmap().save(savePath);
-        setSaveFileName(savePath);
-    }
 }
 
 void MainWindow::on_actionClose_triggered()
@@ -567,11 +537,6 @@ void MainWindow::on_actionFisher_triggered()
         label(i) = tmp(i);
     }
 
-    std::cout << "特征：" << endl;
-    std::cout << features << std::endl;
-    std::cout << "标签：" << std::endl;
-    std::cout << label << std::endl;
-
     // 存储输出结果
     vec weight(features.n_cols);
     vec dataProj(label.size());
@@ -579,10 +544,77 @@ void MainWindow::on_actionFisher_triggered()
 
     fisherTrain(features, label, weight, dataProj, threshold);
 
-    // 存储测试测试结果
+    // 存储测试结果
     uvec predictedLabel(label.size());
     double precision, recall, accuracy, F1;
     fisherTesting(features, weight, threshold, label, predictedLabel, precision, recall, accuracy, F1);
+
+    // 结果绘图
+    //
+    // 类别1，显然这里要用散点图
+    QScatterSeries *group1 = new QScatterSeries;
+    // 添加数据到 series
+    for (uword i = 0; i < 50; i++) {
+        group1->append(features(i, 0), features(i, 1));
+    }
+    // 设置名称，在图例中显示
+    group1->setName(tr("Iris Setosa"));
+    // 设置 marker 为 10，默认为 15
+    group1->setMarkerSize(10);
+
+    // 类别二
+    QScatterSeries *group2 = new QScatterSeries;
+    for (uword i = 50; i < 100; i++) {
+        group2->append(features(i, 0), features(i, 1));
+    }
+    group2->setName(tr("Iris Versicolour"));
+    // 设置 MarkerShape 为矩形，这样方便区分，group1 使用默认的圆形
+    group2->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
+    group2->setMarkerSize(10);
+
+    // 绘图的范围
+    // 取特征点的最值在往外增加一个 offset
+    double offset = 0.3;
+    double xMin = floor(features.col(0).min()) - offset;
+    double xMax = ceil(features.col(0).max()) + offset;
+    double yMin = floor(features.col(1).min()) - offset;
+    double yMax = ceil(features.col(1).max()) + offset;
+
+    // 分类界线
+    QLineSeries *border = new QLineSeries;
+    for (double x = xMin; x < 2*xMax; ++x) {
+        border->append(x, -weight(0)/weight(1)*x + threshold/weight(1));
+    }
+    border->setName(tr("Class Border"));
+    // 线型设置为虚线
+    border->setPen(Qt::DashLine);
+
+    // 新建一个 QChart 对象，并将各个图添加上去
+    QChart *chart = new QChart;
+    chart->addSeries(group1);
+    chart->addSeries(group2);
+    chart->addSeries(border);
+
+    // 创建默认的坐标轴
+    chart->createDefaultAxes();
+    // 设置坐标轴的范围
+    chart->axisX()->setRange(xMin, xMax);
+    chart->axisY()->setRange(yMin, yMax);
+    // 设置一个主题
+    chart->setTheme(QChart::ChartThemeBlueIcy);
+    chart->setTitle(tr("Fisher Linear Discriminant Analysis"));
+    // 启用动画
+    chart->setAnimationOptions(QChart::AllAnimations);
+    // 这个可以设置动画的时长，默认好像是 1000
+    // chart->setAnimationDuration(3000);
+    // 图例放在下方，图例中的 MakerShape 直接取自图表
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+
+    // **关键**，将 chart 跟 chartView 联系起来
+    ui->chartView->setChart(chart);
+    // 启用抗锯齿，提升显示效果
+    ui->chartView->setRenderHint(QPainter::Antialiasing);
 }
 
 // convert arma::Col to QVector
