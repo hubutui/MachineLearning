@@ -525,8 +525,15 @@ CImg<T> MainWindow::rgbToGray(const CImg<T> &img)
 
 void MainWindow::on_actionFisher_triggered()
 {
+
+    // 使用 iris 数据集，从 iris.txt 文件读入
+    QString dataFile = QFileDialog::getOpenFileName(
+                this, tr("Open data file"), QDir::homePath());
+    if (dataFile.isEmpty()) {
+        QMessageBox::critical(this, tr("Error!"), tr("Please select a valid data file."));
+        return;
+    }
     mat data;
-    QString dataFile = "iris.txt";
     data.load(dataFile.toStdString().data());
 
     mat features = data.cols(0, 1);
@@ -536,6 +543,15 @@ void MainWindow::on_actionFisher_triggered()
     for (uword i = 0; i < tmp.size(); ++i) {
         label(i) = tmp(i);
     }
+    // 读取数据完毕
+
+//    // 生成随机数据
+//    mat features(100, 2, arma::fill::randu);
+//    uvec label(100, arma::fill::ones);
+//    for (uword i = 0; i < label.size()/2; ++i) {
+//        label(i) = 0;
+//    }
+//    // 随机数据生成完毕
 
     // 存储输出结果
     vec weight(features.n_cols);
@@ -615,6 +631,13 @@ void MainWindow::on_actionFisher_triggered()
     ui->chartView->setChart(chart);
     // 启用抗锯齿，提升显示效果
     ui->chartView->setRenderHint(QPainter::Antialiasing);
+
+    // 弹出一个消息框，显示测试结果
+    QMessageBox resultBox;
+    QString resultString = tr("Precision:\t%1\nRecall:\t%2\nAccuracy:\t%3\nF1:\t%4").arg(precision).arg(recall).arg(accuracy).arg(F1);
+    resultBox.setText(resultString);
+    // resultBox.setWindowTitle(tr("Fisher LDA"));
+    resultBox.exec();
 }
 
 // convert arma::Col to QVector
