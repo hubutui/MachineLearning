@@ -144,8 +144,47 @@ void MainWindow::fisherTesting(const mat &data, const vec &weight, const double 
     F1 = 2 * precision * recall / (precision + recall);
 }
 
+// 感知机算法实现
+// 输入为 x 为 Nxd 的矩阵，其中 N 为样本数量，d 为特征维数
+// 作业要求是 2 维的，但是这个算法应该是通用的
+// y 是标签，为一个 N 维列向量，取值为 {-1, 1}
+// learningRate 为学习率
+// maxEpoch 为最大迭代次数
+// weight 为所需要学习的权重，为 d+1 维向量
+// weight 的最后一维为偏置
+void MainWindow::perceptionLearn(const mat &data, const ivec &label, const double &learningRate, const int &maxEpoch, vec &weight)
+{
+    // 输入数据的 size
+    uword m = data.n_rows;
+    uword n = data.n_cols;
+    // 将输入数据改写为增广形式
+    mat x = ones(m, n+1);
+    x.cols(0, n - 1) = data;
+
+    // 训练结束的标志
+    bool finishFlag;
+
+    // 这个循环就是训练的主要代码
+    for (int epoch = 0; epoch < maxEpoch; ++epoch) {
+        finishFlag = true;
+
+        for (uword i = 0; i < m; ++i) {
+            if (sign(dot(x.row(i), weight)) != label(i)) {
+                finishFlag = false;
+                weight += learningRate*label(i)*x.row(i).t();
+            }
+        }
+
+        if (finishFlag) {
+            break;
+        }
+    }
+}
+
 // 读取 csv 文件
 // 将结果按行优先顺序存储到 data 中
+// 这个本来是用来从 csv 文件读取数据的，后来发现可以用 armadillo 读取 matlab 保存的文件
+// 然后就用不上了．
 void MainWindow::readCsv(const QString &fileName, QVector<double> &data)
 {
     QFile file(fileName);
@@ -525,10 +564,14 @@ CImg<T> MainWindow::rgbToGray(const CImg<T> &img)
 
 void MainWindow::on_actionFisher_triggered()
 {
-
-    // 使用 iris 数据集，从 iris.txt 文件读入
+    // 使用 iris 数据集，从纯文本文件读入
+    // 文件的格式为 tab 分隔的数值
+    // 第一列和第二列为特征，第三列为标签
+    // 标签的取值为 {-1, 1}
+    // 这种类型的文件可以直接用 MATLAB/Octave 的 save 函数保存
+    // 例如 save('iris.txt', 'data', '-ascii')
     QString dataFile = QFileDialog::getOpenFileName(
-                this, tr("Open data file"), QDir::homePath());
+                this, tr("Open data file"), QDir::currentPath());
     if (dataFile.isEmpty()) {
         QMessageBox::critical(this, tr("Error!"), tr("Please select a valid data file."));
         return;
@@ -546,7 +589,9 @@ void MainWindow::on_actionFisher_triggered()
     // 读取数据完毕
 
 //    // 生成随机数据
-//    mat features(100, 2, arma::fill::randu);
+    // 实际上这里的代码应该用不上了，因为显然可以用 matlab 生成随机数据
+    // 然后保存到文件，再用上面的代码读取就好了
+//    mat features(100, 2, arma::fill::randn);
 //    uvec label(100, arma::fill::ones);
 //    for (uword i = 0; i < label.size()/2; ++i) {
 //        label(i) = 0;
@@ -651,4 +696,116 @@ Col<T> MainWindow::QVectorToCol(const QVector<T> &vector)
     }
 
     return result;
+}
+
+// 符号函数
+// x >=0 时返回 1，否则返回 -1
+template<typename T>
+int MainWindow::sign(const T &x)
+{
+    if (x >= 0) {
+        return 1;
+    } else {
+        return -1;
+    }
+}
+
+void MainWindow::on_actionPerception_triggered()
+{
+    // 使用 iris 数据集，从纯文本文件读入
+    // 文件的格式为 tab 分隔的数值
+    // 第一列和第二列为特征，第三列为标签
+    // 标签的取值为 {-1, 1}
+    // 这种类型的文件可以直接用 MATLAB/Octave 的 save 函数保存
+    // 例如 save('iris.txt', 'data', '-ascii')
+    QString dataFile = QFileDialog::getOpenFileName(
+                this, tr("Open data file"), QDir::currentPath());
+    if (dataFile.isEmpty()) {
+        QMessageBox::critical(this, tr("Error!"), tr("Please select a valid data file."));
+        return;
+    }
+    mat data;
+    data.load(dataFile.toStdString().data());
+
+    mat features = data.cols(0, 1);
+    vec tmp = data.col(2);
+    ivec label(tmp.size());
+
+    for (uword i = 0; i < tmp.size(); ++i) {
+        label(i) = tmp(i);
+    }
+
+    // 权向量
+    vec weight(3, arma::fill::randn);
+    // 训练
+    double learningRate = 0.5;
+    int maxEpoch = 1000;
+    perceptionLearn(features, label, learningRate, maxEpoch, weight);
+
+    // 结果绘图，这部分的代码直接从 fisher 线性判别的那部分修改过来的
+    //
+    // 类别1，显然这里要用散点图
+    QScatterSeries *group1 = new QScatterSeries;
+    // 添加数据到 series
+    for (uword i = 0; i < 50; i++) {
+        group1->append(features(i, 0), features(i, 1));
+    }
+    // 设置名称，在图例中显示
+    group1->setName(tr("Iris Setosa"));
+    // 设置 marker 为 10，默认为 15
+    group1->setMarkerSize(10);
+
+    // 类别二
+    QScatterSeries *group2 = new QScatterSeries;
+    for (uword i = 51; i < 100; i++) {
+        group2->append(features(i, 0), features(i, 1));
+    }
+    group2->setName(tr("Iris Versicolour"));
+    // 设置 MarkerShape 为矩形，这样方便区分，group1 使用默认的圆形
+    group2->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
+    group2->setMarkerSize(10);
+
+    // 绘图的范围
+    // 取特征点的最值在往外增加一个 offset
+    double offset = 0.3;
+    double xMin = floor(features.col(0).min()) - offset;
+    double xMax = ceil(features.col(0).max()) + offset;
+    double yMin = floor(features.col(1).min()) - offset;
+    double yMax = ceil(features.col(1).max()) + offset;
+
+    // 分类界线
+    QLineSeries *border = new QLineSeries;
+    for (double x = xMin; x < 2*xMax; ++x) {
+        border->append(x, -weight(0)/weight(1)*x - weight(2)/weight(1));
+    }
+    border->setName(tr("Class Border"));
+    // 线型设置为虚线
+    border->setPen(Qt::DashLine);
+
+    // 新建一个 QChart 对象，并将各个图添加上去
+    QChart *chart = new QChart;
+    chart->addSeries(group1);
+    chart->addSeries(group2);
+    chart->addSeries(border);
+
+    // 创建默认的坐标轴
+    chart->createDefaultAxes();
+    // 设置坐标轴的范围
+    chart->axisX()->setRange(xMin, xMax);
+    chart->axisY()->setRange(yMin, yMax);
+    // 设置一个主题
+    chart->setTheme(QChart::ChartThemeBlueIcy);
+    chart->setTitle(tr("Perception"));
+    // 启用动画
+    chart->setAnimationOptions(QChart::AllAnimations);
+    // 这个可以设置动画的时长，默认好像是 1000
+    // chart->setAnimationDuration(3000);
+    // 图例放在下方，图例中的 MakerShape 直接取自图表
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+
+    // **关键**，将 chart 跟 chartView 联系起来
+    ui->chartView->setChart(chart);
+    // 启用抗锯齿，提升显示效果
+    ui->chartView->setRenderHint(QPainter::Antialiasing);
 }

@@ -57,6 +57,8 @@ private slots:
 
     void on_actionFisher_triggered();
 
+    void on_actionPerception_triggered();
+
 private:
     Ui::MainWindow *ui;
 
@@ -103,10 +105,14 @@ private:
     void fisherTesting(const mat &data, const vec &weight, const double &threshold, const uvec &label,
                        uvec &predictedLabel, double &precision, double &recall, double &accuracy, double &F1);
 
+    void perceptionLearn(const mat &x, const ivec &y, const double &learningRate, const int &maxEpoch, vec &weight);
     void readCsv(const QString &fileName, QVector<double> &data);
 
     template <typename T>
     Col<T> QVectorToCol(const QVector<T> &vector);
+
+    template <typename T>
+    int sign(const T &x);
 };
 
 #endif // MAINWINDOW_H

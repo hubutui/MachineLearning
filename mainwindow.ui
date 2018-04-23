@@ -82,6 +82,7 @@
      <string>LDA</string>
     </property>
     <addaction name="actionFisher"/>
+    <addaction name="actionPerception"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Edit"/>
@@ -142,6 +143,11 @@
   <action name="actionFisher">
    <property name="text">
     <string>Fisher</string>
+   </property>
+  </action>
+  <action name="actionPerception">
+   <property name="text">
+    <string>Perception</string>
    </property>
   </action>
  </widget>
