@@ -610,7 +610,8 @@ void MainWindow::on_actionFisher_triggered()
 {
     // 使用 iris 数据集，从纯文本文件读入
     // 文件的格式为 tab 分隔的数值
-    // 第一列和第二列为特征，第三列为标签
+    // 按列算，前面的列为特征，最后一列为标签
+    // 这里都是只用两个特征，所以只读取前两列和最后一列
     // 标签的取值为 {-1, 1}
     // 这种类型的文件可以直接用 MATLAB/Octave 的 save 函数保存
     // 例如 save('iris.txt', 'data', '-ascii')
@@ -624,7 +625,8 @@ void MainWindow::on_actionFisher_triggered()
     data.load(dataFile.toStdString().data());
 
     mat features = data.cols(0, 1);
-    vec tmp = data.col(2);
+    // 读取最后一列做为标签
+    vec tmp = data.col(data.n_cols - 1);
     ivec label(tmp.size());
 
     for (uword i = 0; i < tmp.size(); ++i) {
@@ -659,20 +661,26 @@ void MainWindow::on_actionFisher_triggered()
     //
     // 类别1，显然这里要用散点图
     QScatterSeries *group1 = new QScatterSeries;
-    // 添加数据到 series
-    for (uword i = 0; i < 50; i++) {
-        group1->append(features(i, 0), features(i, 1));
+    // 类别2
+    QScatterSeries *group2 = new QScatterSeries;
+
+    // 直接遍历，根据 label 取值的不同，将数据点加入到不同的 series
+    // 这样的代码会更加通用，样本的数量不再是固定的前50个为类别1，后50个为类别2
+    for (uword i = 0; i < label.n_elem; ++i) {
+        if (label(i) == -1) {
+            group1->append(features(i, 0), features(i, 1));
+        } else if (label(i) == 1) {
+            group2->append(features(i, 0), features(i, 1));
+        } else {
+            // something might be wrong, but we don't care
+            // and do nothing
+        }
     }
+
     // 设置名称，在图例中显示
     group1->setName(tr("Iris Setosa"));
     // 设置 marker 为 10，默认为 15
     group1->setMarkerSize(10);
-
-    // 类别二
-    QScatterSeries *group2 = new QScatterSeries;
-    for (uword i = 50; i < 100; i++) {
-        group2->append(features(i, 0), features(i, 1));
-    }
     group2->setName(tr("Iris Versicolour"));
     // 设置 MarkerShape 为矩形，这样方便区分，group1 使用默认的圆形
     group2->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
@@ -759,7 +767,8 @@ void MainWindow::on_actionPerception_triggered()
 {
     // 使用 iris 数据集，从纯文本文件读入
     // 文件的格式为 tab 分隔的数值
-    // 第一列和第二列为特征，第三列为标签
+    // 按列算，前面的列为特征，最后一列为标签
+    // 这里都是只用两个特征，所以只读取前两列和最后一列
     // 标签的取值为 {-1, 1}
     // 这种类型的文件可以直接用 MATLAB/Octave 的 save 函数保存
     // 例如 save('iris.txt', 'data', '-ascii')
@@ -773,7 +782,7 @@ void MainWindow::on_actionPerception_triggered()
     data.load(dataFile.toStdString().data());
 
     mat features = data.cols(0, 1);
-    vec tmp = data.col(2);
+    vec tmp = data.col(data.n_cols - 1);
     ivec label(tmp.size());
 
     for (uword i = 0; i < tmp.size(); ++i) {
@@ -791,20 +800,26 @@ void MainWindow::on_actionPerception_triggered()
     //
     // 类别1，显然这里要用散点图
     QScatterSeries *group1 = new QScatterSeries;
-    // 添加数据到 series
-    for (uword i = 0; i < 50; i++) {
-        group1->append(features(i, 0), features(i, 1));
+    // 类别2
+    QScatterSeries *group2 = new QScatterSeries;
+
+    // 直接遍历，根据 label 取值的不同，将数据点加入到不同的 series
+    // 这样的代码会更加通用，样本的数量不再是固定的前50个为类别1，后50个为类别2
+    for (uword i = 0; i < label.n_elem; ++i) {
+        if (label(i) == -1) {
+            group1->append(features(i, 0), features(i, 1));
+        } else if (label(i) == 1) {
+            group2->append(features(i, 0), features(i, 1));
+        }  else {
+            // something might be wrong, but we don't care
+            // and do nothing
+        }
     }
+
     // 设置名称，在图例中显示
     group1->setName(tr("Iris Setosa"));
     // 设置 marker 为 10，默认为 15
     group1->setMarkerSize(10);
-
-    // 类别二
-    QScatterSeries *group2 = new QScatterSeries;
-    for (uword i = 51; i < 100; i++) {
-        group2->append(features(i, 0), features(i, 1));
-    }
     group2->setName(tr("Iris Versicolour"));
     // 设置 MarkerShape 为矩形，这样方便区分，group1 使用默认的圆形
     group2->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
