@@ -100,10 +100,10 @@ private:
     template <typename T>
     CImg<T> padImage(const CImg<T> &img);
 
-    void fisherTrain(const mat &data, const uvec &label, vec &weight, vec &dataProj, double &threshold);
+    void fisherTrain(const mat &data, const ivec &label, vec &weight, vec &dataProj, double &threshold);
 
-    void fisherTest(const mat &data, const vec &weight, const double &threshold, const uvec &label,
-                       uvec &predictedLabel, double &precision, double &recall, double &accuracy, double &F1);
+    void fisherTest(const mat &data, const vec &weight, const double &threshold, const ivec &label,
+                       ivec &predictedLabel, double &precision, double &recall, double &accuracy, double &F1);
 
     void perceptionTrain(const mat &data, const ivec &label, const double &learningRate, const int &maxEpoch, vec &weight);
     void perceptionTest(const mat &data, const ivec &label, const vec &weight,

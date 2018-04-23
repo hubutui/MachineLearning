@@ -57,11 +57,14 @@ int MainWindow::rgbToGray(const int &r, const int &g, const int &b)
     return (r * 11 + g * 16 + b * 5)/32;
 }
 
-void MainWindow::fisherTrain(const mat &data, const uvec &label, vec &weight, vec &dataProj, double &threshold)
+void MainWindow::fisherTrain(const mat &data, const ivec &label, vec &weight, vec &dataProj, double &threshold)
 {
-    // 根据 label 获取类别 1 和类别 2 的数据，label 取值为 0 的为类别 1，取值为 1 的为类别 2
+    // 根据 label 获取类别 1 和类别 2 的数据，label 取值为 -1 的为类别 1，取值为 1 的为类别 2
+    // 这里 label 取值 -1 是因为跟感知机的保持一致，这样就可以使用相同的数据文件
+    // 显然 label 取值只要能将两类区别开即可
+    //
     // find 函数返回满足逻辑表达式的 ind
-    uvec inds1 = arma::find(label == 0);
+    uvec inds1 = arma::find(label == -1);
     uvec inds2 = arma::find(label == 1);
     // 注意到 data 的 size 为 Nx2 的矩阵
     // 对应着 label，应该取出 find 返回的 ind 对应的行
@@ -69,10 +72,10 @@ void MainWindow::fisherTrain(const mat &data, const uvec &label, vec &weight, ve
     mat data2 = data.rows(inds2);
     // 本来想这样子写简单一点的，但是实际上后面还是会用到 find 函数
     // 索性全部改掉了
-//    // 这里写得简单一点，类别 1 和类别 2 各占一半
-//    // 并且就是输入数据的前一半为类别1，后一半为类别2
-//    mat data1 = data.rows(0, data.n_rows/2 - 1);
-//    mat data2 = data.rows(data.n_rows/2, data.n_rows - 1);
+    //    // 这里写得简单一点，类别 1 和类别 2 各占一半
+    //    // 并且就是输入数据的前一半为类别1，后一半为类别2
+    //    mat data1 = data.rows(0, data.n_rows/2 - 1);
+    //    mat data2 = data.rows(data.n_rows/2, data.n_rows - 1);
 
     // 计算均值
     mat mu1 = arma::mean(data1);
@@ -82,7 +85,7 @@ void MainWindow::fisherTrain(const mat &data, const uvec &label, vec &weight, ve
     mat S1 = cov(data1);
     mat S2 = cov(data2);
     // 计算变换矩阵
-    weight = inv(S1 + S2)*(mu1 - mu2).t();
+    weight = inv(S1 + S2)*(mu2 - mu1).t();
     // 计算投影后的data
     dataProj = data*weight;
 
@@ -123,19 +126,25 @@ void MainWindow::fisherTrain(const mat &data, const uvec &label, vec &weight, ve
     }
 }
 
-void MainWindow::fisherTest(const mat &data, const vec &weight, const double &threshold, const uvec &label,
-                               uvec &predictedLabel, double &precision, double &recall, double &accuracy, double &F1)
+void MainWindow::fisherTest(const mat &data, const vec &weight, const double &threshold, const ivec &label,
+                            ivec &predictedLabel, double &precision, double &recall, double &accuracy, double &F1)
 {
     vec dataProj = data*weight;
-    predictedLabel = dataProj < threshold;
+    // 计算预测的标签
+    for (uword i = 0; i < predictedLabel.n_elem; ++i) {
+        if (dataProj(i) < threshold) {
+            predictedLabel(i) = -1;
+        } else {
+            predictedLabel(i) = 1;
+        }
+    }
 
     // true positive, true negative
     // fasle positive, false negative
-
     double tp = sum(label == 1 && predictedLabel == 1);
-    double tn = sum(label == 0 && predictedLabel == 0);
-    double fp = sum(label == 0 && predictedLabel == 1);
-    double fn = sum(label == 1 && predictedLabel == 0);
+    double tn = sum(label == -1 && predictedLabel == -1);
+    double fp = sum(label == -1 && predictedLabel == 1);
+    double fn = sum(label == 1 && predictedLabel == -1);
 
     precision = tp / (tp + fp);
     recall = tp / (tp + fn);
@@ -169,10 +178,10 @@ void MainWindow::perceptionTrain(const mat &data, const ivec &label, const doubl
 
         for (uword i = 0; i < m; ++i) {
             // 这种方式直接判断 label 的，没有用到损失函数
-//            if (sign(dot(x.row(i), weight)) != label(i)) {
-//                finishFlag = false;
-//                weight += learningRate * label(i) * x.row(i).t();
-//            }
+            //            if (sign(dot(x.row(i), weight)) != label(i)) {
+            //                finishFlag = false;
+            //                weight += learningRate * label(i) * x.row(i).t();
+            //            }
             // 这种方式才是使用损失函数来判断的
             if (label(i) * (dot(x.row(i), weight)) <= 0) {
                 finishFlag = false;
@@ -616,22 +625,22 @@ void MainWindow::on_actionFisher_triggered()
 
     mat features = data.cols(0, 1);
     vec tmp = data.col(2);
-    uvec label(tmp.size());
+    ivec label(tmp.size());
 
     for (uword i = 0; i < tmp.size(); ++i) {
         label(i) = tmp(i);
     }
     // 读取数据完毕
 
-//    // 生成随机数据
+    //    // 生成随机数据
     // 实际上这里的代码应该用不上了，因为显然可以用 matlab 生成随机数据
     // 然后保存到文件，再用上面的代码读取就好了
-//    mat features(100, 2, arma::fill::randn);
-//    uvec label(100, arma::fill::ones);
-//    for (uword i = 0; i < label.size()/2; ++i) {
-//        label(i) = 0;
-//    }
-//    // 随机数据生成完毕
+    //    mat features(100, 2, arma::fill::randn);
+    //    uvec label(100, arma::fill::ones);
+    //    for (uword i = 0; i < label.size()/2; ++i) {
+    //        label(i) = 0;
+    //    }
+    //    // 随机数据生成完毕
 
     // 存储输出结果
     vec weight(features.n_cols);
@@ -641,8 +650,9 @@ void MainWindow::on_actionFisher_triggered()
     fisherTrain(features, label, weight, dataProj, threshold);
 
     // 存储测试结果
-    uvec predictedLabel(label.size());
+    ivec predictedLabel(label.size());
     double precision, recall, accuracy, F1;
+
     fisherTest(features, weight, threshold, label, predictedLabel, precision, recall, accuracy, F1);
 
     // 结果绘图
