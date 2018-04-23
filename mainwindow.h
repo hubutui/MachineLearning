@@ -102,7 +102,7 @@ private:
 
     void fisherTrain(const mat &data, const uvec &label, vec &weight, vec &dataProj, double &threshold);
 
-    void fisherTesting(const mat &data, const vec &weight, const double &threshold, const uvec &label,
+    void fisherTest(const mat &data, const vec &weight, const double &threshold, const uvec &label,
                        uvec &predictedLabel, double &precision, double &recall, double &accuracy, double &F1);
 
     void perceptionTrain(const mat &data, const ivec &label, const double &learningRate, const int &maxEpoch, vec &weight);

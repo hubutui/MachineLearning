@@ -123,7 +123,7 @@ void MainWindow::fisherTrain(const mat &data, const uvec &label, vec &weight, ve
     }
 }
 
-void MainWindow::fisherTesting(const mat &data, const vec &weight, const double &threshold, const uvec &label,
+void MainWindow::fisherTest(const mat &data, const vec &weight, const double &threshold, const uvec &label,
                                uvec &predictedLabel, double &precision, double &recall, double &accuracy, double &F1)
 {
     vec dataProj = data*weight;
@@ -643,7 +643,7 @@ void MainWindow::on_actionFisher_triggered()
     // 存储测试结果
     uvec predictedLabel(label.size());
     double precision, recall, accuracy, F1;
-    fisherTesting(features, weight, threshold, label, predictedLabel, precision, recall, accuracy, F1);
+    fisherTest(features, weight, threshold, label, predictedLabel, precision, recall, accuracy, F1);
 
     // 结果绘图
     //
