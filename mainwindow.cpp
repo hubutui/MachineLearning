@@ -132,7 +132,6 @@ void MainWindow::fisherTesting(const mat &data, const vec &weight, const double 
     // true positive, true negative
     // fasle positive, false negative
 
-
     double tp = sum(label == 1 && predictedLabel == 1);
     double tn = sum(label == 0 && predictedLabel == 0);
     double fp = sum(label == 0 && predictedLabel == 1);
@@ -152,7 +151,7 @@ void MainWindow::fisherTesting(const mat &data, const vec &weight, const double 
 // maxEpoch 为最大迭代次数
 // weight 为所需要学习的权重，为 d+1 维向量
 // weight 的最后一维为偏置
-void MainWindow::perceptionLearn(const mat &data, const ivec &label, const double &learningRate, const int &maxEpoch, vec &weight)
+void MainWindow::perceptionTrain(const mat &data, const ivec &label, const double &learningRate, const int &maxEpoch, vec &weight)
 {
     // 输入数据的 size
     uword m = data.n_rows;
@@ -169,9 +168,15 @@ void MainWindow::perceptionLearn(const mat &data, const ivec &label, const doubl
         finishFlag = true;
 
         for (uword i = 0; i < m; ++i) {
-            if (sign(dot(x.row(i), weight)) != label(i)) {
+            // 这种方式直接判断 label 的，没有用到损失函数
+//            if (sign(dot(x.row(i), weight)) != label(i)) {
+//                finishFlag = false;
+//                weight += learningRate * label(i) * x.row(i).t();
+//            }
+            // 这种方式才是使用损失函数来判断的
+            if (label(i) * (dot(x.row(i), weight)) <= 0) {
                 finishFlag = false;
-                weight += learningRate*label(i)*x.row(i).t();
+                weight += learningRate * label(i) * x.row(i).t();
             }
         }
 
@@ -179,6 +184,36 @@ void MainWindow::perceptionLearn(const mat &data, const ivec &label, const doubl
             break;
         }
     }
+}
+
+// 感知机测试函数
+// 输入 data, label, weight 等参数与训练函数的类似
+// 其他参数与 fisher 的测试函数类似
+void MainWindow::perceptionTest(const mat &data, const ivec &label, const vec &weight,
+                                ivec &predictedLabel, double &precision, double &recall, double &accuracy, double &F1)
+{
+    // 输入数据的 size
+    uword m = data.n_rows;
+    uword n = data.n_cols;
+    // 将输入数据改写为增广形式
+    mat x = ones(m, n+1);
+    x.cols(0, n - 1) = data;
+
+    // 计算预测的标签
+    for (uword i = 0; i < label.n_elem; ++i) {
+        predictedLabel(i) = sign(dot(x.row(i), weight));
+    }
+    // 计算 tp, tn, fp, fn
+    // 然后根据这些计算精确率准确率召回率等
+    double tp = sum(label == 1 && predictedLabel == 1);
+    double tn = sum(label == -1 && predictedLabel == -1);
+    double fp = sum(label == -1 && predictedLabel == 1);
+    double fn = sum(label == 1 && predictedLabel == -1);
+
+    precision = tp / (tp + fp);
+    recall = tp / (tp + fn);
+    accuracy = (tp + tn) / (tp + tn + fp + fn);
+    F1 = 2 * precision * recall / (precision + recall);
 }
 
 // 读取 csv 文件
@@ -740,7 +775,7 @@ void MainWindow::on_actionPerception_triggered()
     // 训练
     double learningRate = 0.5;
     int maxEpoch = 1000;
-    perceptionLearn(features, label, learningRate, maxEpoch, weight);
+    perceptionTrain(features, label, learningRate, maxEpoch, weight);
 
     // 结果绘图，这部分的代码直接从 fisher 线性判别的那部分修改过来的
     //
@@ -808,4 +843,15 @@ void MainWindow::on_actionPerception_triggered()
     ui->chartView->setChart(chart);
     // 启用抗锯齿，提升显示效果
     ui->chartView->setRenderHint(QPainter::Antialiasing);
+
+    double precision, recall, accuracy, F1;
+    ivec predictedLabel(label.size());
+
+    perceptionTest(features, label, weight, predictedLabel, precision, recall, accuracy, F1);
+    // 弹出一个消息框，显示测试结果
+    QMessageBox resultBox;
+    QString resultString = tr("Precision:\t%1\nRecall:\t%2\nAccuracy:\t%3\nF1:\t%4").arg(precision).arg(recall).arg(accuracy).arg(F1);
+    resultBox.setText(resultString);
+    // resultBox.setWindowTitle(tr("Perception"));
+    resultBox.exec();
 }
