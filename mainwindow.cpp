@@ -89,6 +89,7 @@ void MainWindow::fisherTrain(const mat &data, const ivec &label, vec &weight, ve
     // 计算投影后的data
     dataProj = data*weight;
 
+    // 方法一
     // 下面利用投影后的 data 进行计算阈值 threshold
     // 首先求出投影后的两类数据
     vec dataProj1 = dataProj.rows(inds1);
@@ -102,7 +103,7 @@ void MainWindow::fisherTrain(const mat &data, const ivec &label, vec &weight, ve
     // 散度矩阵
     S1 = cov(dataProj1);
     S2 = cov(dataProj2);
-    // 这部分还不知道什么意思，照抄的
+    // 计算一元二次方程的系数
     double a = S2(0) - S1(0);
     double b = -2*(mu1(0)*S2(0) - mu2(0)*S1(0));
     double c = S2(0)*mu1(0)*mu1(0) - S1(0)*mu2(0)*mu2(0) - 2*S1(0)*S2(0)*log(double(n1)/n2);
@@ -124,6 +125,8 @@ void MainWindow::fisherTrain(const mat &data, const ivec &label, vec &weight, ve
             threshold = t2;
         }
     }
+    // 方法二，直接取投影后的均值作为阈值
+    // threshold = mean(dataProj);
 }
 
 void MainWindow::fisherTest(const mat &data, const vec &weight, const double &threshold, const ivec &label,
