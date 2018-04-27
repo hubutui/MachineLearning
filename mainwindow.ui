@@ -84,10 +84,18 @@
     <addaction name="actionFisher"/>
     <addaction name="actionPerception"/>
    </widget>
+   <widget class="QMenu" name="menuNLDA">
+    <property name="title">
+     <string>NLDA</string>
+    </property>
+    <addaction name="actionMinimum_Distance_Classifier"/>
+    <addaction name="actionKNN"/>
+   </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Edit"/>
    <addaction name="menu_Texture"/>
    <addaction name="menuLDA"/>
+   <addaction name="menuNLDA"/>
    <addaction name="menu_Help"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
@@ -148,6 +156,16 @@
   <action name="actionPerception">
    <property name="text">
     <string>Perception</string>
+   </property>
+  </action>
+  <action name="actionKNN">
+   <property name="text">
+    <string>KNN</string>
+   </property>
+  </action>
+  <action name="actionMinimum_Distance_Classifier">
+   <property name="text">
+    <string>Minimum Distance Classifier</string>
    </property>
   </action>
  </widget>
