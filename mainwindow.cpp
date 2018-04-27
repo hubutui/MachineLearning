@@ -916,7 +916,7 @@ void MainWindow::on_actionMinimum_Distance_Classifier_triggered()
 //    mat features = data.cols(0, data.n_cols - 2);
     // 训练比率
     const double trainRate = 0.7;
-    int trainNum = trainRate*data.n_rows;
+    uword trainNum = trainRate*data.n_rows;
     vec tmp = data.col(data.n_cols - 1);
     uvec label(tmp.size());
 
