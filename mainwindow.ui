@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QGraphicsView" name="graphicsView_in">
+     <widget class="QGraphicsView" name="graphicsView">
       <property name="minimumSize">
        <size>
         <width>400</width>

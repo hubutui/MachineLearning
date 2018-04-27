@@ -301,7 +301,7 @@ void MainWindow::on_action_Open_triggered()
     // add pixmap to scene
     scene->addPixmap(pixmap);
     // attach QGrapicsView with QGraphicsScene
-    ui->graphicsView_in->setScene(scene);
+    ui->graphicsView->setScene(scene);
 
     // update fileName for later use
     setFileName(imagePath);
@@ -739,14 +739,14 @@ void MainWindow::on_actionFisher_triggered()
     // 图例放在下方，图例中的 MakerShape 直接取自图表
     chart->legend()->setAlignment(Qt::AlignBottom);
     chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-    chart->setGeometry(ui->graphicsView_in->rect());
+    chart->setGeometry(ui->graphicsView->rect());
 
     // 创建一个 QGraphicsScene 对象
     QGraphicsScene *scene = new QGraphicsScene;
     // 将 chart 添加到 scene 中
     scene->addItem(chart);
     // 连接 UI 中的 QGrapicsView 对象与 scene
-    ui->graphicsView_in->setScene(scene);
+    ui->graphicsView->setScene(scene);
 
     // 弹出一个消息框，显示测试结果
     QMessageBox resultBox;
@@ -881,14 +881,14 @@ void MainWindow::on_actionPerception_triggered()
     // 图例放在下方，图例中的 MakerShape 直接取自图表
     chart->legend()->setAlignment(Qt::AlignBottom);
     chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-    chart->setGeometry(ui->graphicsView_in->rect());
+    chart->setGeometry(ui->graphicsView->rect());
 
     // 创建一个 QGraphicsScene 对象
     QGraphicsScene *scene = new QGraphicsScene;
     // 将 chart 添加到 scene 中
     scene->addItem(chart);
     // 连接 UI 中的 QGrapicsView 对象与 scene
-    ui->graphicsView_in->setScene(scene);
+    ui->graphicsView->setScene(scene);
 
     double precision, recall, accuracy, F1;
     ivec predictedLabel(label.size());
@@ -1038,12 +1038,12 @@ void MainWindow::on_actionMinimum_Distance_Classifier_triggered()
     // 图例放在下方，图例中的 MakerShape 直接取自图表
     chart->legend()->setAlignment(Qt::AlignBottom);
     chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-    chart->setGeometry(ui->graphicsView_in->rect());
+    chart->setGeometry(ui->graphicsView->rect());
 
     // 创建一个 QGraphicsScene 对象
     QGraphicsScene *scene = new QGraphicsScene;
     // 将 chart 添加到 scene 中
     scene->addItem(chart);
     // 连接 UI 中的 QGrapicsView 对象与 scene
-    ui->graphicsView_in->setScene(scene);
+    ui->graphicsView->setScene(scene);
 }
