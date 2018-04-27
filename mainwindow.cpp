@@ -739,17 +739,20 @@ void MainWindow::on_actionFisher_triggered()
     // 图例放在下方，图例中的 MakerShape 直接取自图表
     chart->legend()->setAlignment(Qt::AlignBottom);
     chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+    chart->setGeometry(ui->graphicsView_in->rect());
 
-    // **关键**，将 chart 跟 chartView 联系起来
-    ui->chartView->setChart(chart);
-    // 启用抗锯齿，提升显示效果
-    ui->chartView->setRenderHint(QPainter::Antialiasing);
+    // 创建一个 QGraphicsScene 对象
+    QGraphicsScene *scene = new QGraphicsScene;
+    // 将 chart 添加到 scene 中
+    scene->addItem(chart);
+    // 连接 UI 中的 QGrapicsView 对象与 scene
+    ui->graphicsView_in->setScene(scene);
 
     // 弹出一个消息框，显示测试结果
     QMessageBox resultBox;
     QString resultString = tr("Precision:\t%1\nRecall:\t%2\nAccuracy:\t%3\nF1:\t%4").arg(precision).arg(recall).arg(accuracy).arg(F1);
     resultBox.setText(resultString);
-    // resultBox.setWindowTitle(tr("Fisher LDA"));
+    resultBox.setWindowTitle(tr("Fisher LDA"));
     resultBox.exec();
 }
 
