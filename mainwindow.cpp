@@ -13,15 +13,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
-    inScene = new QGraphicsScene;
-
-    ui->graphicsView_in->setScene(inScene);
-
-    inPixmap = new QPixmap;
-    inPixmapItem = inScene->addPixmap(*inPixmap);
-
-    resultFileName = "tmp.tiff";
 }
 
 MainWindow::~MainWindow()
@@ -34,22 +25,10 @@ void MainWindow::on_action_Quit_triggered()
     QApplication::quit();
 }
 
-// clean image
-void MainWindow::cleanImage()
-{
-    inScene->clear();
-}
-
 void MainWindow::setFileName(const QString &fileName)
 {
     this->fileName = fileName;
 }
-
-void MainWindow::setSaveFileName(const QString &saveFileName)
-{
-    this->saveFileName = saveFileName;
-}
-
 
 // rgb to gray scale, adapt from qt's function
 int MainWindow::rgbToGray(const int &r, const int &g, const int &b)
@@ -267,7 +246,7 @@ void MainWindow::minDistanceClassifier(const mat &data,
     // 计算测试样本与各类别的距离
     vec distance(nCount);
     for (uword i = 0; i < testData.n_rows; ++i) {
-        for (int j = 0; j < nCount; ++j) {
+        for (unsigned int j = 0; j < nCount; ++j) {
             distance(j) = norm(testData.row(i) - meanValue.row(j));
         }
         // 最小距离的下标就是其预测所属的类别
@@ -306,46 +285,26 @@ void MainWindow::readCsv(const QString &fileName, QVector<double> &data)
 
 void MainWindow::on_action_Open_triggered()
 {
+    // get image file name
     QString imagePath = QFileDialog::getOpenFileName(
                 this, tr("Open file"), QDir::homePath(), imageFormat);
 
-    // check if file is valid
-    if (!imagePath.isEmpty()) {
-        QFile file(imagePath);
-
-        if(!file.open(QIODevice::ReadOnly)) {
-            QMessageBox::critical(this, tr("Error"), tr("Unable to read image!"));
-            return;
-        }
-
-        // clear previouly showed image
-        cleanImage();
-
-        // show image
-        inPixmap->load(imagePath);
-        inPixmapItem = inScene->addPixmap(*inPixmap);
-        inScene->setSceneRect(QRectF(inPixmap->rect()));
-
-        // save fileName for later use
-        setFileName(imagePath);
+    // if imagePath is invalid, just return, and do nothing.
+    if (imagePath.isEmpty()) {
+        return;
     }
-}
+    // create QPixmap object, and init with image file name
+    QPixmap pixmap(imagePath);
+    // create QGraphicsScene
+    QGraphicsScene *scene = new QGraphicsScene;
 
-// save output image
-void MainWindow::on_action_Save_triggered()
-{
-}
+    // add pixmap to scene
+    scene->addPixmap(pixmap);
+    // attach QGrapicsView with QGraphicsScene
+    ui->graphicsView_in->setScene(scene);
 
-// save output image as
-void MainWindow::on_actionSave_as_triggered()
-{
-    QString savePath = QFileDialog::getSaveFileName(this, tr("Save image"), QDir::homePath(), imageFormat);
-}
-
-void MainWindow::on_actionClose_triggered()
-{
-    cleanImage();
-    setFileName("");
+    // update fileName for later use
+    setFileName(imagePath);
 }
 
 void MainWindow::on_actionGLCM_triggered()

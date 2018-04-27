@@ -43,12 +43,6 @@ private slots:
 
     void on_action_Open_triggered();
 
-    void on_action_Save_triggered();
-
-    void on_actionSave_as_triggered();
-
-    void on_actionClose_triggered();
-
     void on_actionGLCM_triggered();
 
     void glcm(const int &distance, const int &theta, const int &grayLevel);
@@ -64,18 +58,11 @@ private slots:
 private:
     Ui::MainWindow *ui;
 
-    QGraphicsScene *inScene;
-    QPixmap *inPixmap;
-    QGraphicsPixmapItem *inPixmapItem;
     QString imageFormat = tr("All Images (*.bmp *.cur *.gif *.icns *.ico *.jp2 *.jpeg *.jpg *.mng *.pbm *.pgm *.png *.ppm *.svg *.svgz *.tga *.tif *.tiff *.wbmp *.webp *.xbm *.xpm);;");
     QString fileName;
-    QString saveFileName;
-    // result file name used for update out scene
-    QString resultFileName;
 
     DialogGLCM *dlgGLCM;
 
-    void cleanImage(void);
     void setFileName(const QString &fileName);
     void setSaveFileName(const QString &saveFileName);
     inline int rgbToGray(const int &r, const int &g, const int &b);

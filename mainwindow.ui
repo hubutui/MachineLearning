@@ -47,7 +47,7 @@
      <x>0</x>
      <y>0</y>
      <width>863</width>
-     <height>29</height>
+     <height>32</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -55,9 +55,6 @@
      <string>&amp;File</string>
     </property>
     <addaction name="action_Open"/>
-    <addaction name="action_Save"/>
-    <addaction name="actionSave_as"/>
-    <addaction name="actionClose"/>
     <addaction name="action_Quit"/>
    </widget>
    <widget class="QMenu" name="menu_Edit">
@@ -79,14 +76,14 @@
    </widget>
    <widget class="QMenu" name="menuLDA">
     <property name="title">
-     <string>LDA</string>
+     <string>&amp;LDA</string>
     </property>
     <addaction name="actionFisher"/>
     <addaction name="actionPerception"/>
    </widget>
    <widget class="QMenu" name="menuNLDA">
     <property name="title">
-     <string>NLDA</string>
+     <string>&amp;NLDA</string>
     </property>
     <addaction name="actionMinimum_Distance_Classifier"/>
     <addaction name="actionKNN"/>
@@ -124,7 +121,7 @@
   </action>
   <action name="actionSave_as">
    <property name="text">
-    <string>Save as</string>
+    <string>Sa&amp;ve as</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>
@@ -132,12 +129,12 @@
   </action>
   <action name="actionClose">
    <property name="text">
-    <string>Close</string>
+    <string>&amp;Close</string>
    </property>
   </action>
   <action name="actionGLCM">
    <property name="text">
-    <string>GLCM</string>
+    <string>&amp;GLCM</string>
    </property>
    <property name="toolTip">
     <string>ay-level co-occurrence matrix</string>
@@ -145,27 +142,27 @@
   </action>
   <action name="actionFractal_dimension">
    <property name="text">
-    <string>Fractal dimension</string>
+    <string>&amp;Fractal dimension</string>
    </property>
   </action>
   <action name="actionFisher">
    <property name="text">
-    <string>Fisher</string>
+    <string>&amp;Fisher</string>
    </property>
   </action>
   <action name="actionPerception">
    <property name="text">
-    <string>Perception</string>
+    <string>&amp;Perception</string>
    </property>
   </action>
   <action name="actionKNN">
    <property name="text">
-    <string>KNN</string>
+    <string>&amp;KNN</string>
    </property>
   </action>
   <action name="actionMinimum_Distance_Classifier">
    <property name="text">
-    <string>Minimum Distance Classifier</string>
+    <string>&amp;Minimum Distance Classifier</string>
    </property>
   </action>
  </widget>
