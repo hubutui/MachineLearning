@@ -235,10 +235,6 @@ void MainWindow::minDistanceClassifier(const mat &data,
     mat meanValue(nCount, data.n_cols);
 
     // 找到 label == i 的训练数据，并计算它们的均值
-    uword siz = trainData.n_cols;
-    siz = trainData.n_rows;
-    siz = meanValue.n_cols;
-    siz = meanValue.n_rows;
     for (uword i = 0; i < nCount; ++i) {
         meanValue.row(i) = mean(trainData.rows(arma::find(trainLabel == i)));
     }
