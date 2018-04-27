@@ -25,6 +25,9 @@
           <height>400</height>
          </size>
         </property>
+        <property name="renderHints">
+         <set>QPainter::Antialiasing|QPainter::SmoothPixmapTransform|QPainter::TextAntialiasing</set>
+        </property>
        </widget>
       </item>
       <item>
