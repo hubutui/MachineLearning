@@ -881,11 +881,14 @@ void MainWindow::on_actionPerception_triggered()
     // 图例放在下方，图例中的 MakerShape 直接取自图表
     chart->legend()->setAlignment(Qt::AlignBottom);
     chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+    chart->setGeometry(ui->graphicsView_in->rect());
 
-    // **关键**，将 chart 跟 chartView 联系起来
-    ui->chartView->setChart(chart);
-    // 启用抗锯齿，提升显示效果
-    ui->chartView->setRenderHint(QPainter::Antialiasing);
+    // 创建一个 QGraphicsScene 对象
+    QGraphicsScene *scene = new QGraphicsScene;
+    // 将 chart 添加到 scene 中
+    scene->addItem(chart);
+    // 连接 UI 中的 QGrapicsView 对象与 scene
+    ui->graphicsView_in->setScene(scene);
 
     double precision, recall, accuracy, F1;
     ivec predictedLabel(label.size());
