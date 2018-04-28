@@ -75,7 +75,7 @@ private:
     template <typename T>
     inline bool isGrayscale(const CImg<T> &img);
 
-    Mat<int> graycomatrix(const Mat<int> &SI, const int &grayLevel, const int &rowStep, const int &colStep);
+    mat graycomatrix(const Mat<int> &SI, const int &grayLevel, const int &rowStep, const int &colStep);
 
     double getASM(const mat &glcmMatrix);
 

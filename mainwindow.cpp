@@ -41,12 +41,12 @@ int MainWindow::rgbToGray(const int &r, const int &g, const int &b)
 // grayLevel 是 SI 的灰度级，一般取值为 8, 16, 32, 64, 128, 256 等
 // rowStep 和 colStep 分别是行方向和列方向的位移
 // 更多信息可以参考 https://github.com/palmerc/GLCM/blob/master/GLCM.m
-Mat<int> MainWindow::graycomatrix(const Mat<int> &SI, const int &grayLevel, const int &rowStep, const int &colStep)
+mat MainWindow::graycomatrix(const Mat<int> &SI, const int &grayLevel, const int &rowStep, const int &colStep)
 {
     // 用于保存结果的变量
     // 显然大小为 grayLevel x grayLevel
     // 并且填满 0 值
-    Mat<int> result(grayLevel, grayLevel, arma::fill::zeros);
+    mat result(grayLevel, grayLevel, arma::fill::zeros);
 
     // 生成灰度共生矩阵的关键
     // 遍历整个 SI 矩阵
@@ -443,8 +443,6 @@ void MainWindow::glcm(const int &distance, const int &theta, const int &grayLeve
     CImg<int> img(fileName.toStdString().data());
     CImg<int> grayImg(img.width(), img.height());
     CImg<int> SIImg(grayLevel, grayLevel);
-    CImg<int> glcmImg(grayLevel, grayLevel, 1, 1, 0);
-    CImg<double> glcmImgNorm(glcmImg);
 
     // 确认图像为灰度图，否则就转换为灰度图
     if (!isGrayscale(img)) {
@@ -453,9 +451,12 @@ void MainWindow::glcm(const int &distance, const int &theta, const int &grayLeve
         grayImg = img;
     }
     // 先进行直方图均衡，然后重新量化，减少灰度级
+    // 注意，这个量化的算法与 MATLAB 中的 graycomatrix 函数中用到的量化算法不一样
+    // 所求求出来的 SI 矩阵是不同的，进而导致求出的特征也不同
     SIImg = grayImg.get_equalize(256).get_quantize(grayLevel, false);
     // 转换为 arma::Mat 类型
     Mat<int> SI = cimgToMat(SIImg);
+
     // 根据 theta 和 distance 确定 rowStep 和 colStep
     int rowStep, colStep;
     switch(theta) {
@@ -480,17 +481,18 @@ void MainWindow::glcm(const int &distance, const int &theta, const int &grayLeve
         return;
     }
     // 计算灰度共生矩阵
-    Mat<int> glcmMat = graycomatrix(SI, grayLevel, rowStep, colStep);
-    // 归一化后的灰度共生矩阵，也就是做个简单的除法
-    // 没有自动的类型转换，自能自己写个循环处理了
-    double glcmSum = accu(glcmMat);
-    Mat<double> glcmMatNorm(glcmMat.n_rows, glcmMat.n_cols);
+    mat glcmMat = graycomatrix(SI, grayLevel, rowStep, colStep);
 
     for (uword i = 0; i < glcmMat.n_rows; ++i) {
         for (uword j = 0; j < glcmMat.n_cols; ++j) {
-            glcmMatNorm(i, j) = glcmMat(i, j)/glcmSum;
+            std::cout << glcmMat(i, j) << "\t";
         }
+        std::cout << std::endl;
     }
+
+    // 将灰度共生矩阵归一化
+    glcmMat /= accu(glcmMat);
+    Mat<double> glcmMatNorm = glcmMat/accu(glcmMat);
 
     // features needed to calculate
     // Angular Second Moment, ASM
