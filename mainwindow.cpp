@@ -41,12 +41,12 @@ int MainWindow::rgbToGray(const int &r, const int &g, const int &b)
 // grayLevel 是 SI 的灰度级，一般取值为 8, 16, 32, 64, 128, 256 等
 // rowStep 和 colStep 分别是行方向和列方向的位移
 // 更多信息可以参考 https://github.com/palmerc/GLCM/blob/master/GLCM.m
-umat MainWindow::graycomatrix(const umat &SI, const int &grayLevel, const int &rowStep, const int &colStep)
+Mat<int> MainWindow::graycomatrix(const Mat<int> &SI, const int &grayLevel, const int &rowStep, const int &colStep)
 {
     // 用于保存结果的变量
     // 显然大小为 grayLevel x grayLevel
     // 并且填满 0 值
-    umat result(grayLevel, grayLevel, arma::fill::zeros);
+    Mat<int> result(grayLevel, grayLevel, arma::fill::zeros);
 
     // 生成灰度共生矩阵的关键
     // 遍历整个 SI 矩阵
@@ -55,7 +55,7 @@ umat MainWindow::graycomatrix(const umat &SI, const int &grayLevel, const int &r
     // 指定的距离和方向由 (rowStep, colStep) 确定
     //
     // 将变量定义在循环外，避免每次循环都新建变量
-    uword intensity1, intensity2;
+    int intensity1, intensity2;
     for (uword row = 0; row < SI.n_rows; ++row) {
         for (uword col = 0; col < SI.n_cols; ++col) {
             intensity1 = SI(row, col);
@@ -64,6 +64,118 @@ umat MainWindow::graycomatrix(const umat &SI, const int &grayLevel, const int &r
                 intensity2 = SI(row + rowStep, col + colStep);
                 result(intensity1, intensity2) += 1;
             }
+        }
+    }
+
+    // 上面计算得到的灰度共生矩阵并不是对称矩阵
+    // 也就是说 0 度角和 180 度角的灰度共生矩阵是不一样的
+    // 但是一般常用的还是要对称矩阵
+    // 要得到对称矩阵，只需将其与转置矩阵相加即可
+    // 因为后续计算的时候是使用的归一化的灰度共生矩阵
+    // 所以并不需要 (result + result.t()) / 2
+
+    return result + result.t();
+}
+
+// ASM，角二阶矩，也称作能量
+// 计算公式为 \sum_{i,j}^{k} p(i, j)^2
+double MainWindow::getASM(const mat &glcmMatrix)
+{
+    double result = 0.0f;
+
+    for (uword i = 0; i < glcmMatrix.n_rows; ++i) {
+        for (uword j = 0; j < glcmMatrix.n_cols; ++j) {
+            result += glcmMatrix(i, j)*glcmMatrix(i, j);
+        }
+    }
+
+    return result;
+}
+
+// IDM，逆差矩
+// 计算公式 \sum_{i, j}^{k} p(i, j)/(1 + (i - j)^2)
+double MainWindow::getIDM(const mat &glcmMatrix)
+{
+    double result = 0.0f;
+
+    for (uword i = 0; i < glcmMatrix.n_rows; ++i) {
+        for (uword j = 0; j < glcmMatrix.n_cols; ++j) {
+            result += glcmMatrix(i, j) / (1 + (i - j)*(i - j));
+        }
+    }
+
+    return result;
+}
+
+// Contrast，对比度
+// 计算公式 sum_{i, j}^{k} (i - j)^2 p(i, j)
+double MainWindow::getContrast(const mat &glcmMatrix)
+{
+    double result = 0.0f;
+
+    for (uword i = 0; i < glcmMatrix.n_rows; ++i) {
+        for (uword j = 0; j < glcmMatrix.n_cols; ++j) {
+            result += (i - j)*(i - j)*glcmMatrix(i, j);
+        }
+    }
+
+    return result;
+}
+
+// Correlation，相关
+// 计算公式 \sum_{i, j}^{k} p(i, j)(i - mu_r)(j - mu_c)/(sigma_r*sigma_c)
+// 其中 mu_r, mu_c 为灰度共生矩阵的行和列均值
+// sigma_r, sigma_c 为灰度共生矩阵的行和列方差
+double MainWindow::getCorrelation(const mat &glcmMatrix)
+{
+    // 分别将行相加和列相加
+    vec px = sum(glcmMatrix, 1);
+    vec py = sum(glcmMatrix, 0).t();
+    // 计算统计量均值和方差
+    // 注意，这里的输入为归一化之后的灰度共生矩阵
+    // 也就是说这个矩阵中的每个元素代表的是频率
+    // 所以均值和方差的计算不能直接调用 mean 和 var 函数
+    double mu_x = 0.0f;
+    double mu_y = 0.0f;
+    double sigma_x = 0.0f;
+    double sigma_y = 0.0f;
+
+    for (uword i = 0; i < px.n_elem; ++i) {
+        mu_x += i*px(i);
+    }
+
+    for (uword i = 0; i < px.n_elem; ++i) {
+        sigma_x += (i - mu_x)*(i - mu_x)*px(i);
+    }
+
+    for (uword i = 0; i < py.n_elem; ++i) {
+        mu_y += i*py(i);
+    }
+
+    for (uword i = 0; i < py.n_elem; ++i) {
+        sigma_y += (i - mu_y)*(i - mu_y)*py(i);
+    }
+
+    double result = 0.0f;
+    for (uword i = 0; i < glcmMatrix.n_rows; ++i) {
+        for (uword j = 0; j < glcmMatrix.n_cols; ++j) {
+            result += glcmMatrix(i, j) * (i - mu_x) * (j - mu_y) / (sigma_x*sigma_y);
+        }
+    }
+
+    return result;
+}
+
+// Entropy，熵
+// 计算公式 -\sum_{i, j}^{k} p(i, j)log2(p(i, j))
+double MainWindow::getEntropy(const mat &glcmMatrix)
+{
+    double result = 0.0f;
+
+    for (uword i = 0; i < glcmMatrix.n_rows; ++i) {
+        for (uword j = 0; j < glcmMatrix.n_cols; ++j) {
+            // 注意这里的 log2(N) 的 N 可能为 0
+            result += -glcmMatrix(i, j)*log2(glcmMatrix(i, j) + DBL_EPSILON);
         }
     }
 
@@ -353,34 +465,72 @@ void MainWindow::glcm(const int &distance, const int &theta, const int &grayLeve
 {
     CImg<int> img(fileName.toStdString().data());
     CImg<int> grayImg(img.width(), img.height());
+    CImg<int> SIImg(grayLevel, grayLevel);
     CImg<int> glcmImg(grayLevel, grayLevel, 1, 1, 0);
     CImg<double> glcmImgNorm(glcmImg);
 
-    // make sure input image is grayscale
+    // 确认图像为灰度图，否则就转换为灰度图
     if (!isGrayscale(img)) {
         grayImg = rgbToGray(img);
     } else {
         grayImg = img;
     }
-    // firstly, do histogram equalize, then quantize to grayLevel to reduce glcm matrix size
-    grayImg.equalize(256).quantize(grayLevel, false);
-    glcmImg = getGlcm(grayImg, distance, theta, grayLevel);
-    // normalization
-    glcmImgNorm = glcmImg/glcmImg.sum();
+    // 先进行直方图均衡，然后重新量化，减少灰度级
+    SIImg = grayImg.get_equalize(256).get_quantize(grayLevel, false);
+    // 转换为 arma::Mat 类型
+    Mat<int> SI = cimgToMat(SIImg);
+    // 根据 theta 和 distance 确定 rowStep 和 colStep
+    int rowStep, colStep;
+    switch(theta) {
+    case 0:
+        rowStep = 0;
+        colStep = distance;
+        break;
+    case 45:
+        rowStep = -distance;
+        colStep = -distance;
+        break;
+    case 90:
+        rowStep = -distance;
+        colStep = 0;
+        break;
+    case 135:
+        rowStep = -distance;
+        colStep = -distance;
+        break;
+    default:
+        QMessageBox::critical(this, tr("Error"), tr("Theta != 0, 45, 90, 135"));
+        return;
+    }
+    // 计算灰度共生矩阵
+    Mat<int> glcmMat = graycomatrix(SI, grayLevel, rowStep, colStep);
+    // 归一化后的灰度共生矩阵，也就是做个简单的除法
+    // 没有自动的类型转换，自能自己写个循环处理了
+    double glcmSum = accu(glcmMat);
+    Mat<double> glcmMatNorm(glcmMat.n_rows, glcmMat.n_cols);
+
+    for (uword i = 0; i < glcmMat.n_rows; ++i) {
+        for (uword j = 0; j < glcmMat.n_cols; ++j) {
+            glcmMatNorm(i, j) = glcmMat(i, j)/glcmSum;
+        }
+    }
+
     // features needed to calculate
     // Angular Second Moment, ASM
     // Inverse Differential Moment, IDM
     // Contrast
     // Correlation
     // Entropy
-    double ASM = getASM(glcmImgNorm);
-    double IDM = getIDM(glcmImgNorm);
-    double contrast = getContrast(glcmImgNorm);
-    double correlation = getCorrelation(glcmImgNorm);
-    double entropy = getEntropy(glcmImgNorm);
+
+    double ASM = getASM(glcmMatNorm);
+    double IDM = getIDM(glcmMatNorm);
+    double contrast = getContrast(glcmMatNorm);
+    double correlation = getCorrelation(glcmMatNorm);
+    double entropy = getEntropy(glcmMatNorm);
+
     // pop up a messagebox to show result
     QMessageBox resultBox;
-    QString resultString = tr("ASM:\t\t%1\nIDM:\t\t%2\nContrast:\t\t%3\nCorrelation:\t%4\nEntropy:\t\t%5").arg(ASM).arg(IDM).arg(contrast).arg(correlation).arg(entropy);
+    QString resultString = tr("ASM:\t\t%1\nIDM:\t\t%2\nContrast:\t%3\nCorrelation:\t%4\nEntropy:\t\t%5").arg(ASM).arg(IDM).arg(contrast).arg(correlation).arg(entropy);
     resultBox.setText(resultString);
     resultBox.setWindowTitle(tr("Texture Features"));
     resultBox.exec();
@@ -394,145 +544,6 @@ bool MainWindow::isGrayscale(const CImg<T> &img)
     } else {
         return false;
     }
-}
-
-template <typename T>
-CImg<T> MainWindow::getGlcm(const CImg<T> &img, const int &distance, const int &theta, const int &grayLevel)
-{
-    CImg<T> glcmImg(grayLevel, grayLevel, 1, 1, 0);
-    int rows, cols;
-
-    switch(theta) {
-    case 0:
-        cimg_forXY(img, x, y) {
-            if (x + distance < img.width()) {
-                rows = img(x, y);
-                cols = img(x + distance, y);
-                glcmImg(rows, cols)++;
-            }
-        }
-        break;
-
-    case 45:
-        cimg_forXY(img, x, y) {
-            if (x - distance >= 0 && y + distance < img.height()) {
-                rows = img(x, y);
-                cols = img(x - distance, y + distance);
-            }
-        }
-        break;
-
-    case 90:
-        cimg_forXY(img, x, y) {
-            if (x - distance >= 0) {
-                rows = img(x, y);
-                cols = img(x - distance, y);
-            }
-        }
-        break;
-
-    case 135:
-        cimg_forXY(img, x, y) {
-            if (x - distance >= 0 && y - distance >= 0) {
-                rows = img(x, y);
-                cols = img(x - distance, y - distance);
-            }
-        }
-        break;
-
-    default:
-        QMessageBox::critical(this, tr("Error!"), tr("Oops, something is wrong!"));
-    }
-
-    return glcmImg;
-}
-
-template <typename T>
-double MainWindow::getEntropy(const CImg<T> &img)
-{
-    double result = 0.0f;
-
-    cimg_forXY(img, x, y) {
-        result += img(x, y)*log2(img(x, y) + DBL_EPSILON);
-    }
-
-    return -result;
-}
-
-template<typename T>
-double MainWindow::getASM(const CImg<T> &img)
-{
-    double result = 0.0f;
-
-    cimg_forXY(img, x, y) {
-        result += img(x, y)*img(x, y);
-    }
-
-    return result;
-}
-
-template<typename T>
-double MainWindow::getIDM(const CImg<T> &img)
-{
-    double result = 0.0f;
-
-    cimg_forXY(img, x, y) {
-        result += img(x, y)/(1 + (x - y)*(x - y));
-    }
-
-    return result;
-}
-
-template<typename T>
-double MainWindow::getContrast(const CImg<T> &img)
-{
-    double result = 0.0f;
-
-    cimg_forXY(img, x, y) {
-        result += (x - y)*(x - y)*img(x, y);
-    }
-
-    return result;
-}
-
-template<typename T>
-double MainWindow::getCorrelation(const CImg<T> &img)
-{
-    double result = 0.0f;
-    CImg<T> Px(img.width(), 1, 1, 1, 0);
-    CImg<T> Py(1, img.height(), 1, 1, 0);
-
-    cimg_forXY(img, x, y) {
-        Px(x, 0) += img(x, y);
-        Py(0, y) += img(x, y);
-    }
-
-    double meanX = 0.0f;
-    double meanY = 0.0f;
-    double varianceX = 0.0f;
-    double varianceY = 0.0f;
-
-    cimg_forXY(Px, x, y) {
-        meanX += x*Px(x, y);
-    }
-
-    cimg_forXY(Px, x, y) {
-        varianceX += (x - meanX)*(x - meanX)*Px(x, y);
-    }
-
-    cimg_forXY(Py, x, y) {
-        meanY += y*Py(x, y);
-    }
-
-    cimg_forXY(Py, x, y) {
-        varianceY += (y - meanY)*(y - meanY)*Py(x, y);
-    }
-
-    cimg_forXY(img, x, y) {
-        result += (x - meanX)*(y - meanY)*img(x, y)/(varianceX*varianceY + DBL_EPSILON);
-    }
-
-    return result;
 }
 
 void MainWindow::on_actionFractal_dimension_triggered()
@@ -557,12 +568,14 @@ void MainWindow::on_actionFractal_dimension_triggered()
     resultBox.exec();
 }
 
-// convert 2D grayscale image to a matrix
+// 将 CImg.h 的图像转换为 armadillo 的 Mat 矩阵
+// 因为 Mat 是 2D 矩阵，所以输入只能是灰度图像
 template<typename T>
 Mat<T> MainWindow::cimgToMat(const CImg<T> &img)
 {
     Mat<T> result(img.width(), img.height());
 
+    // 直接在一个循环内将所有的像素点的灰度值赋值给对应的矩阵即可
     cimg_forXY(img, x, y) {
         result(x, y) = img(x, y);
     }

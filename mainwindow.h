@@ -64,31 +64,35 @@ private:
     DialogGLCM *dlgGLCM;
 
     void setFileName(const QString &fileName);
+
     void setSaveFileName(const QString &saveFileName);
+
     inline int rgbToGray(const int &r, const int &g, const int &b);
+
     template <typename T>
     CImg<T> rgbToGray(const CImg<T> &img);
+
     template <typename T>
     inline bool isGrayscale(const CImg<T> &img);
 
-    umat graycomatrix(const umat &SI, const int &grayLevel, const int &rowStep, const int &colStep);
+    Mat<int> graycomatrix(const Mat<int> &SI, const int &grayLevel, const int &rowStep, const int &colStep);
+
+    double getASM(const mat &glcmMatrix);
+
+    double getIDM(const mat &glcmMatrix);
+
+    double getContrast(const mat &glcmMatrix);
+
+    double getCorrelation(const mat &glcmMatrix);
+
+    double getEntropy(const mat &glcmMatrix);
 
     template <typename T>
-    CImg<T> getGlcm(const CImg<T> &img, const int &distance, const int &theta, const int &grayLevel);
-    template <typename T>
-    double getASM(const CImg<T> &img);
-    template <typename T>
-    double getIDM(const CImg<T> &img);
-    template <typename T>
-    double getContrast(const CImg<T> &img);
-    template <typename T>
-    double getCorrelation(const CImg<T> &img);
-    template <typename T>
-    double getEntropy(const CImg<T> &img);
-    template <typename T>
     arma::Mat<T> cimgToMat(const CImg<T> &img);
+
     template <typename T>
     double boxcount(const arma::Mat<T> &img);
+
     template <typename T>
     CImg<T> padImage(const CImg<T> &img);
 
