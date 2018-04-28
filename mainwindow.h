@@ -102,13 +102,12 @@ private:
                        ivec &predictedLabel, double &precision, double &recall, double &accuracy, double &F1);
 
     void perceptionTrain(const mat &data, const ivec &label, const double &learningRate, const int &maxEpoch, vec &weight);
+
     void perceptionTest(const mat &data, const ivec &label, const vec &weight,
                         ivec &predictedLabel, double &precision, double &recall, double &accuracy, double &F1);
 
     void minDistanceClassifier(const mat &data, const uvec &label, const double &trainRate, const unsigned int nCount,
                                uvec &predictedLabel, double &accuracy);
-
-    void readCsv(const QString &fileName, QVector<double> &data);
 
     template <typename T>
     Col<T> QVectorToCol(const QVector<T> &vector);

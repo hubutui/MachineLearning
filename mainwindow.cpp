@@ -402,29 +402,6 @@ void MainWindow::minDistanceClassifier(const mat &data,
     accuracy = correctNum/testNum;
 }
 
-// 读取 csv 文件
-// 将结果按行优先顺序存储到 data 中
-// 这个本来是用来从 csv 文件读取数据的，后来发现可以用 armadillo 读取 matlab 保存的文件
-// 然后就用不上了．
-void MainWindow::readCsv(const QString &fileName, QVector<double> &data)
-{
-    QFile file(fileName);
-    file.open(QIODevice::ReadOnly);
-    // 初始化一个 QTextStream 流
-    QTextStream stream(&file);
-
-    while (!stream.atEnd()) {
-        // 将每行读取并存入到一个字符串中
-        QString str = stream.readLine();
-        // 将字符串按照分隔符 ',' 分割为一个字符串列表
-        QStringList list = str.split(',');
-
-        for (int i = 0; i < list.length(); ++i) {
-            data.append(list.at(i).toDouble());
-        }
-    }
-}
-
 void MainWindow::on_action_Open_triggered()
 {
     // get image file name
