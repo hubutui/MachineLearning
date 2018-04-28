@@ -36,6 +36,40 @@ int MainWindow::rgbToGray(const int &r, const int &g, const int &b)
     return (r * 11 + g * 16 + b * 5)/32;
 }
 
+// 灰度共生矩阵的计算
+// 输入 SI 是经过灰度级量化之后的矩阵
+// grayLevel 是 SI 的灰度级，一般取值为 8, 16, 32, 64, 128, 256 等
+// rowStep 和 colStep 分别是行方向和列方向的位移
+// 更多信息可以参考 https://github.com/palmerc/GLCM/blob/master/GLCM.m
+umat MainWindow::graycomatrix(const umat &SI, const int &grayLevel, const int &rowStep, const int &colStep)
+{
+    // 用于保存结果的变量
+    // 显然大小为 grayLevel x grayLevel
+    // 并且填满 0 值
+    umat result(grayLevel, grayLevel, arma::fill::zeros);
+
+    // 生成灰度共生矩阵的关键
+    // 遍历整个 SI 矩阵
+    // 统计灰度值对 (intensity1, intensity2)
+    // 在指定的距离和方向上出现的次数
+    // 指定的距离和方向由 (rowStep, colStep) 确定
+    //
+    // 将变量定义在循环外，避免每次循环都新建变量
+    uword intensity1, intensity2;
+    for (uword row = 0; row < SI.n_rows; ++row) {
+        for (uword col = 0; col < SI.n_cols; ++col) {
+            intensity1 = SI(row, col);
+            // 确认该点还在矩阵范围内
+            if (row + rowStep < SI.n_rows && col + colStep < SI.n_cols) {
+                intensity2 = SI(row + rowStep, col + colStep);
+                result(intensity1, intensity2) += 1;
+            }
+        }
+    }
+
+    return result;
+}
+
 void MainWindow::fisherTrain(const mat &data, const ivec &label, vec &weight, vec &dataProj, double &threshold)
 {
     // 根据 label 获取类别 1 和类别 2 的数据，label 取值为 -1 的为类别 1，取值为 1 的为类别 2

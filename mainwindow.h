@@ -70,6 +70,9 @@ private:
     CImg<T> rgbToGray(const CImg<T> &img);
     template <typename T>
     inline bool isGrayscale(const CImg<T> &img);
+
+    umat graycomatrix(const umat &SI, const int &grayLevel, const int &rowStep, const int &colStep);
+
     template <typename T>
     CImg<T> getGlcm(const CImg<T> &img, const int &distance, const int &theta, const int &grayLevel);
     template <typename T>
