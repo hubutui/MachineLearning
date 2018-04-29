@@ -438,7 +438,7 @@ void MainWindow::on_actionGLCM_triggered()
             SLOT(glcm(int, int, int)));
 }
 
-void MainWindow::glcm(const int &distance, const int &theta, const int &grayLevel)
+void MainWindow::glcm(const int &rowStep, const int &colStep, const int &grayLevel)
 {
     CImg<int> img(fileName.toStdString().data());
     CImg<int> grayImg(img.width(), img.height());
@@ -457,29 +457,6 @@ void MainWindow::glcm(const int &distance, const int &theta, const int &grayLeve
     // 转换为 arma::Mat 类型
     Mat<int> SI = cimgToMat(SIImg);
 
-    // 根据 theta 和 distance 确定 rowStep 和 colStep
-    int rowStep, colStep;
-    switch(theta) {
-    case 0:
-        rowStep = 0;
-        colStep = distance;
-        break;
-    case 45:
-        rowStep = -distance;
-        colStep = -distance;
-        break;
-    case 90:
-        rowStep = -distance;
-        colStep = 0;
-        break;
-    case 135:
-        rowStep = -distance;
-        colStep = -distance;
-        break;
-    default:
-        QMessageBox::critical(this, tr("Error"), tr("Theta != 0, 45, 90, 135"));
-        return;
-    }
     // 计算灰度共生矩阵
     mat glcmMat = graycomatrix(SI, grayLevel, rowStep, colStep);
 

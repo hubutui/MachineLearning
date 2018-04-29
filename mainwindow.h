@@ -45,7 +45,7 @@ private slots:
 
     void on_actionGLCM_triggered();
 
-    void glcm(const int &distance, const int &theta, const int &grayLevel);
+    void glcm(const int &rowStep, const int &colStep, const int &grayLevel);
 
     void on_actionFractal_dimension_triggered();
 
