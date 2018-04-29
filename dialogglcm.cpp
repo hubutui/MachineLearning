@@ -15,34 +15,27 @@ DialogGLCM::~DialogGLCM()
 
 void DialogGLCM::on_buttonBox_accepted()
 {
-    int theta, grayLevel;
+    emit sendData(ui->spinBoxRowStep->value(), ui->spinBoxColStep->value(), pow(2, ui->comboBoxGrayLevel->currentIndex()) + 1);
+}
 
-    if (ui->radioButtonD0->isChecked()) {
-        theta = 0;
-    } else if (ui->radioButtonD45->isChecked()) {
-        theta = 45;
-    } else if (ui->radioButtonD90->isChecked()) {
-        theta = 90;
-    } else if (ui->radioButtonD135->isChecked()) {
-        theta = 135;
-    } else {
-        return;
+// 计算整数的指数函数
+int DialogGLCM::pow(const int &base, const int &exponent)
+{
+    int result = 1;
+
+    for (int i = 0; i < exponent; ++i) {
+        result *= base;
     }
 
-    if (ui->radioButtonL8->isChecked()) {
-        grayLevel = 8;
-    } else if (ui->radioButtonL16->isChecked()) {
-        grayLevel = 16;
-    } else if (ui->radioButtonL32->isChecked()) {
-        grayLevel = 32;
-    } else if (ui->radioButtonL64->isChecked()) {
-        grayLevel = 64;
-    } else if (ui->radioButtonL128->isChecked()) {
-        grayLevel = 128;
-    } else if (ui->radioButtonL256->isChecked()) {
-        grayLevel = 256;
-    } else {
-        return;
-    }
-    emit sendData(ui->spinBoxDistance->value(), theta, grayLevel);
+    return result;
+}
+
+// 设置步长的取值范围
+// 显然它的最大值为 grayLevel - 1
+// 这里主要是需要根据灰度级的变化来修改
+// 最小值为 0
+void DialogGLCM::on_comboBoxGrayLevel_currentIndexChanged(int index)
+{
+    ui->spinBoxRowStep->setMaximum(pow(2, index+1) - 1);
+    ui->spinBoxColStep->setMaximum(pow(2, index+1) - 1);
 }

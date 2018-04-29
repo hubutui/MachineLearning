@@ -16,13 +16,16 @@ public:
     ~DialogGLCM();
 
 signals:
-    void sendData(const int &distance, const int &theta, const int &grayLevel);
+    void sendData(const int &rowStep, const int &colStep, const int &grayLevel);
 
 private slots:
     void on_buttonBox_accepted();
 
+    void on_comboBoxGrayLevel_currentIndexChanged(int index);
+
 private:
     Ui::DialogGLCM *ui;
+    inline int pow(const int &base, const int &exponent);
 };
 
 #endif // DIALOGGLCM_H
