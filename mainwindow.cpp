@@ -460,13 +460,6 @@ void MainWindow::glcm(const int &rowStep, const int &colStep, const int &grayLev
     // 计算灰度共生矩阵
     mat glcmMat = graycomatrix(SI, grayLevel, rowStep, colStep);
 
-    for (uword i = 0; i < glcmMat.n_rows; ++i) {
-        for (uword j = 0; j < glcmMat.n_cols; ++j) {
-            std::cout << glcmMat(i, j) << "\t";
-        }
-        std::cout << std::endl;
-    }
-
     // 将灰度共生矩阵归一化
     glcmMat /= accu(glcmMat);
     Mat<double> glcmMatNorm = glcmMat/accu(glcmMat);
