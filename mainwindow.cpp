@@ -929,7 +929,7 @@ void MainWindow::on_actionMinimum_Distance_Classifier_triggered()
 
     // 标签取值为 {0, 1,..., N-1}
     // 类别数量为 N
-    const unsigned int nCount = label.max() +1;
+    const unsigned int nCount = label.max() + 1;
     // 预测标签，就是测试的数据
     uvec predictedLabel(label.size() - trainNum);
     // 测试结果
@@ -1045,4 +1045,226 @@ void MainWindow::on_actionMinimum_Distance_Classifier_triggered()
     scene->addItem(chart);
     // 连接 UI 中的 QGrapicsView 对象与 scene
     ui->graphicsView->setScene(scene);
+}
+
+// KNN 分类器
+// 输入参数 data 为数据
+// trainingRate 为训练比率
+// k 为近邻个数
+// label 为真实标签
+// predictedLabel 为预测标签
+void MainWindow::knn(const mat &data, const double &trainingRate, const int &k, const uvec &label,
+                     uvec &predictedLabel)
+{
+    // 训练样本数量
+    const uword trainNum = data.n_rows * trainingRate;
+
+    // 训练数据
+    mat trainData = data.rows(0, trainNum - 1);
+    // 这里使用 vec 是因为后面 histc 的参数需要，不想再做类型转换
+    vec trainLabel(trainNum);
+    for (uword i = 0; i < trainLabel.n_elem; ++i) {
+        trainLabel(i) = static_cast<uword>(label(i));
+    }
+
+    // 测试数据
+    mat testData = data.rows(trainNum, data.n_rows - 1);
+
+    // 测试样本到训练样本的距离
+    vec euclideanDistance(trainData.n_rows);
+
+    // 临时变量，存储 trainData 与 testData(i) 的差值
+    // 然后可以对 tmp 的每一行求其2范数，也就是欧几里德距离
+    mat tmp(trainData.n_rows, trainData.n_cols);
+
+    // 遍历测试数据
+    for (uword i = 0; i < predictedLabel.n_elem; ++i) {
+        tmp = trainData.each_row() + testData.row(i);
+        // lambda 表达式，计算 tmp 矩阵中每一行的 L2 范数，也就是欧几里德距离
+        // 然后赋值给 euclideanDistance 向量
+        for (uword i = 0; i < tmp.n_rows; ++i) {
+            euclideanDistance(i) = norm(tmp.row(i));
+        }
+        // 将距离和标签写成增广矩阵形式
+        mat distance = join_horiz(euclideanDistance, trainLabel);
+        // 升序排序
+        distance = sort(distance);
+        // 找到前 k 个值里对应标签出现次数最多的就是预测的标签
+        predictedLabel(i) = mode(distance(span(0, k - 1), 1));
+    }
+}
+
+// 求向量 v 的众数，也就是出现频次最高的那个数
+// 输入类型必需为 vec
+// 返回值类型为 uword
+// 并且假设输入 v 的取值为标签的取值 {0, 1,..., N-1}
+uword MainWindow::mode(const vec &v)
+{
+    // 显然，只有一个元素，也就是 k = 1 的时候，直接返回就好了
+    if (v.n_elem == 1) {
+        return v(0);
+    } else {
+        uvec histcV = histc(v, linspace(0, max(v) + 1));
+        return index_max(histcV);
+    }
+}
+
+void MainWindow::on_actionKNN_triggered()
+{
+    // 读取数据
+    QString dataFile = QFileDialog::getOpenFileName(
+                this, tr("Open data file"), QDir::currentPath());
+    if (dataFile.isEmpty()) {
+        QMessageBox::critical(this, tr("Error!"), tr("Please select a valid data file."));
+        return;
+    }
+    mat data;
+    data.load(dataFile.toStdString().data());
+
+    // 二维数据，所以就只使用前两个特征
+     mat features = data.cols(0, 1);
+     // 训练比率
+     const double trainRate = 0.7;
+     uword trainNum = trainRate*data.n_rows;
+     vec tmp = data.col(data.n_cols - 1);
+     uvec label(tmp.size());
+
+     for (uword i = 0; i < tmp.size(); ++i) {
+         label(i) = tmp(i);
+     }
+
+     // 标签取值为 {0, 1,..., N-1}
+     // 类别数量为 N
+     const unsigned int nCount = label.max() + 1;
+     // k 个邻居
+     const int k = 5;
+     // 预测标签，就是测试的数据
+     uvec predictedLabel(label.size() - trainNum);
+     // 测试结果
+     double accuracy;
+     // 仅作二分类和三分类
+     if (nCount != 2 && nCount != 3) {
+         QMessageBox::critical(this, tr("Error"), tr("Only 2 or 3 groups."));
+         return;
+     }
+     // 调用函数进行分类
+     knn(features, trainRate, k, label, predictedLabel);
+     // 计算准确率
+     uvec testLabel = label.rows(trainNum, label.n_rows - 1);
+     double correctNum = sum(testLabel == predictedLabel);
+     const int testNum = label.n_rows - trainNum;
+     accuracy = correctNum/testNum;
+
+     // 结果绘图
+     QScatterSeries *group1 = new QScatterSeries;
+     QScatterSeries *group2 = new QScatterSeries;
+
+     QScatterSeries *group1Test = new QScatterSeries;
+     QScatterSeries *group2Test = new QScatterSeries;
+     QScatterSeries *group3 = new QScatterSeries;
+     QScatterSeries *group3Test = new QScatterSeries;
+
+     // 读取数据，保存到对应的 series 里
+     // 训练数据
+     for (uword i = 0; i < trainNum; ++i) {
+         if (label(i) == 0) {
+             group1->append(features(i, 0), features(i, 1));
+         } else if (label(i) == 1) {
+             group2->append(features(i, 0), features(i, 1));
+         } else if (label(i) == 2) {
+             group3->append(features(i, 0), features(i, 1));
+         }
+         else {
+             // something might be wrong, but we don't care
+             // and do nothing
+         }
+     }
+
+     // 测试数据
+     for (uword i = trainNum; i < label.n_elem; ++i) {
+         if (label(i) == 0) {
+             group1Test->append(features(i, 0), features(i, 1));
+         } else if (label(i) == 1) {
+             group2Test->append(features(i, 0), features(i, 1));
+         } else if (label(i) == 2) {
+             group3Test->append(features(i, 0), features(i, 1));
+         }
+         else {
+             // do nothing
+         }
+     }
+
+     // 设置名称
+     group1->setName(tr("Group1"));
+     group2->setName(tr("Group2"));
+     group3->setName(tr("Group3"));
+     group1Test->setName(tr("Group1 Test"));
+     group2Test->setName(tr("Group2 Test"));
+     group3Test->setName(tr("Group3 Test"));
+     // 设置 Marker
+     group1->setMarkerSize(10);
+     group2->setMarkerSize(10);
+     group3->setMarkerSize(10);
+     group1Test->setMarkerSize(15);
+     group2Test->setMarkerSize(15);
+     group3Test->setMarkerSize(15);
+
+     group1->setColor(Qt::GlobalColor::red);
+     group2->setColor(Qt::GlobalColor::green);
+     group3->setColor(Qt::GlobalColor::blue);
+     group1Test->setColor(group1->color());
+     group2Test->setColor(group2->color());
+     group3Test->setColor(group3->color());
+
+     QChart *chart = new QChart;
+     chart->addSeries(group1);
+     chart->addSeries(group2);
+     if (nCount == 3) {
+         chart->addSeries(group3);
+     }
+     chart->addSeries(group1Test);
+     chart->addSeries(group2Test);
+
+     if (nCount == 3) {
+         chart->addSeries(group3Test);
+     }
+
+     // 绘图的范围
+     // 取特征点的最值在往外增加一个 offset
+     double offset = 0.3;
+     double xMin = floor(features.col(0).min()) - offset;
+     double xMax = ceil(features.col(0).max()) + offset;
+     double yMin = floor(features.col(1).min()) - offset;
+     double yMax = ceil(features.col(1).max()) + offset;
+
+     // 创建默认的坐标轴
+     chart->createDefaultAxes();
+     // 设置坐标轴的范围
+     chart->axisX()->setRange(xMin, xMax);
+     chart->axisY()->setRange(yMin, yMax);
+     // 不能设置主题了，否则会覆盖之前的颜色定义
+     // chart->setTheme(QChart::ChartThemeBlueIcy);
+     chart->setTitle(tr("Perception"));
+     // 启用动画
+     chart->setAnimationOptions(QChart::AllAnimations);
+     // 这个可以设置动画的时长，默认好像是 1000
+     // chart->setAnimationDuration(3000);
+     // 图例放在下方，图例中的 MakerShape 直接取自图表
+     chart->legend()->setAlignment(Qt::AlignBottom);
+     chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+     chart->setGeometry(ui->graphicsView->rect());
+
+     // 创建一个 QGraphicsScene 对象
+     QGraphicsScene *scene = new QGraphicsScene;
+     // 将 chart 添加到 scene 中
+     scene->addItem(chart);
+     // 连接 UI 中的 QGrapicsView 对象与 scene
+     ui->graphicsView->setScene(scene);
+
+     // pop up a messagebox to show result
+     QMessageBox resultBox;
+     QString resultString = tr("Accuracy:\t%1").arg(accuracy);
+     resultBox.setText(resultString);
+     resultBox.setWindowTitle(tr("KNN"));
+     resultBox.exec();
 }

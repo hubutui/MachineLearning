@@ -38,3 +38,4 @@ FORMS += \
 
 unix: CONFIG += link_pkgconfig
 unix: PKGCONFIG += armadillo
+CONFIG += C++11

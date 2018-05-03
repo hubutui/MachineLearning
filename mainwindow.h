@@ -55,6 +55,11 @@ private slots:
 
     void on_actionMinimum_Distance_Classifier_triggered();
 
+    void knn(const mat &data, const double &trainingRate, const int &k, const uvec &label,
+             uvec &predictedLabel);
+
+    void on_actionKNN_triggered();
+
 private:
     Ui::MainWindow *ui;
 
@@ -114,6 +119,8 @@ private:
 
     template <typename T>
     int sign(const T &x);
+
+    uword mode(const vec &v);
 };
 
 #endif // MAINWINDOW_H
