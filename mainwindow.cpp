@@ -907,9 +907,9 @@ void MainWindow::on_actionMinimum_Distance_Classifier_triggered()
     data.load(dataFile.toStdString().data());
 
     // 二维数据，所以就只使用前两个特征
-     mat features = data.cols(0, 1);
+    mat features = data.cols(0, 1);
     // 试试使用所有的特征
-//    mat features = data.cols(0, data.n_cols - 2);
+    //    mat features = data.cols(0, data.n_cols - 2);
     // 训练比率
     const double trainRate = 0.7;
     uword trainNum = trainRate*data.n_rows;
@@ -1115,149 +1115,149 @@ void MainWindow::on_actionKNN_triggered()
     data.load(dataFile.toStdString().data());
 
     // 二维数据，所以就只使用前两个特征
-     mat features = data.cols(0, 1);
-     // 训练比率
-     const double trainRate = 0.7;
-     uword trainNum = trainRate*data.n_rows;
-     vec tmp = data.col(data.n_cols - 1);
-     uvec label(tmp.size());
+    mat features = data.cols(0, 1);
+    // 训练比率
+    const double trainRate = 0.7;
+    uword trainNum = trainRate*data.n_rows;
+    vec tmp = data.col(data.n_cols - 1);
+    uvec label(tmp.size());
 
-     for (uword i = 0; i < tmp.size(); ++i) {
-         label(i) = tmp(i);
-     }
+    for (uword i = 0; i < tmp.size(); ++i) {
+        label(i) = tmp(i);
+    }
 
-     // 标签取值为 {0, 1,..., N-1}
-     // 类别数量为 N
-     const unsigned int nCount = label.max() + 1;
-     // k 个邻居
-     const int k = 5;
-     // 预测标签，就是测试的数据
-     uvec predictedLabel(label.size() - trainNum);
-     // 测试结果
-     double accuracy;
-     // 仅作二分类和三分类
-     if (nCount != 2 && nCount != 3) {
-         QMessageBox::critical(this, tr("Error"), tr("Only 2 or 3 groups."));
-         return;
-     }
-     // 调用函数进行分类
-     knn(features, trainRate, k, label, predictedLabel);
-     // 计算准确率
-     uvec testLabel = label.rows(trainNum, label.n_rows - 1);
-     double correctNum = sum(testLabel == predictedLabel);
-     const int testNum = label.n_rows - trainNum;
-     accuracy = correctNum/testNum;
+    // 标签取值为 {0, 1,..., N-1}
+    // 类别数量为 N
+    const unsigned int nCount = label.max() + 1;
+    // k 个邻居
+    const int k = 5;
+    // 预测标签，就是测试的数据
+    uvec predictedLabel(label.size() - trainNum);
+    // 测试结果
+    double accuracy;
+    // 仅作二分类和三分类
+    if (nCount != 2 && nCount != 3) {
+        QMessageBox::critical(this, tr("Error"), tr("Only 2 or 3 groups."));
+        return;
+    }
+    // 调用函数进行分类
+    knn(features, trainRate, k, label, predictedLabel);
+    // 计算准确率
+    uvec testLabel = label.rows(trainNum, label.n_rows - 1);
+    double correctNum = sum(testLabel == predictedLabel);
+    const int testNum = label.n_rows - trainNum;
+    accuracy = correctNum/testNum;
 
-     // 结果绘图
-     QScatterSeries *group1 = new QScatterSeries;
-     QScatterSeries *group2 = new QScatterSeries;
+    // 结果绘图
+    QScatterSeries *group1 = new QScatterSeries;
+    QScatterSeries *group2 = new QScatterSeries;
 
-     QScatterSeries *group1Test = new QScatterSeries;
-     QScatterSeries *group2Test = new QScatterSeries;
-     QScatterSeries *group3 = new QScatterSeries;
-     QScatterSeries *group3Test = new QScatterSeries;
+    QScatterSeries *group1Test = new QScatterSeries;
+    QScatterSeries *group2Test = new QScatterSeries;
+    QScatterSeries *group3 = new QScatterSeries;
+    QScatterSeries *group3Test = new QScatterSeries;
 
-     // 读取数据，保存到对应的 series 里
-     // 训练数据
-     for (uword i = 0; i < trainNum; ++i) {
-         if (label(i) == 0) {
-             group1->append(features(i, 0), features(i, 1));
-         } else if (label(i) == 1) {
-             group2->append(features(i, 0), features(i, 1));
-         } else if (label(i) == 2) {
-             group3->append(features(i, 0), features(i, 1));
-         }
-         else {
-             // something might be wrong, but we don't care
-             // and do nothing
-         }
-     }
+    // 读取数据，保存到对应的 series 里
+    // 训练数据
+    for (uword i = 0; i < trainNum; ++i) {
+        if (label(i) == 0) {
+            group1->append(features(i, 0), features(i, 1));
+        } else if (label(i) == 1) {
+            group2->append(features(i, 0), features(i, 1));
+        } else if (label(i) == 2) {
+            group3->append(features(i, 0), features(i, 1));
+        }
+        else {
+            // something might be wrong, but we don't care
+            // and do nothing
+        }
+    }
 
-     // 测试数据
-     for (uword i = trainNum; i < label.n_elem; ++i) {
-         if (label(i) == 0) {
-             group1Test->append(features(i, 0), features(i, 1));
-         } else if (label(i) == 1) {
-             group2Test->append(features(i, 0), features(i, 1));
-         } else if (label(i) == 2) {
-             group3Test->append(features(i, 0), features(i, 1));
-         }
-         else {
-             // do nothing
-         }
-     }
+    // 测试数据
+    for (uword i = trainNum; i < label.n_elem; ++i) {
+        if (label(i) == 0) {
+            group1Test->append(features(i, 0), features(i, 1));
+        } else if (label(i) == 1) {
+            group2Test->append(features(i, 0), features(i, 1));
+        } else if (label(i) == 2) {
+            group3Test->append(features(i, 0), features(i, 1));
+        }
+        else {
+            // do nothing
+        }
+    }
 
-     // 设置名称
-     group1->setName(tr("Group1"));
-     group2->setName(tr("Group2"));
-     group3->setName(tr("Group3"));
-     group1Test->setName(tr("Group1 Test"));
-     group2Test->setName(tr("Group2 Test"));
-     group3Test->setName(tr("Group3 Test"));
-     // 设置 Marker
-     group1->setMarkerSize(10);
-     group2->setMarkerSize(10);
-     group3->setMarkerSize(10);
-     group1Test->setMarkerSize(15);
-     group2Test->setMarkerSize(15);
-     group3Test->setMarkerSize(15);
+    // 设置名称
+    group1->setName(tr("Group1"));
+    group2->setName(tr("Group2"));
+    group3->setName(tr("Group3"));
+    group1Test->setName(tr("Group1 Test"));
+    group2Test->setName(tr("Group2 Test"));
+    group3Test->setName(tr("Group3 Test"));
+    // 设置 Marker
+    group1->setMarkerSize(10);
+    group2->setMarkerSize(10);
+    group3->setMarkerSize(10);
+    group1Test->setMarkerSize(15);
+    group2Test->setMarkerSize(15);
+    group3Test->setMarkerSize(15);
+    // 设置颜色，相同类别的颜色是一样的
+    group1->setColor(Qt::GlobalColor::red);
+    group2->setColor(Qt::GlobalColor::green);
+    group3->setColor(Qt::GlobalColor::blue);
+    group1Test->setColor(group1->color());
+    group2Test->setColor(group2->color());
+    group3Test->setColor(group3->color());
 
-     group1->setColor(Qt::GlobalColor::red);
-     group2->setColor(Qt::GlobalColor::green);
-     group3->setColor(Qt::GlobalColor::blue);
-     group1Test->setColor(group1->color());
-     group2Test->setColor(group2->color());
-     group3Test->setColor(group3->color());
+    QChart *chart = new QChart;
+    chart->addSeries(group1);
+    chart->addSeries(group2);
+    if (nCount == 3) {
+        chart->addSeries(group3);
+    }
+    chart->addSeries(group1Test);
+    chart->addSeries(group2Test);
 
-     QChart *chart = new QChart;
-     chart->addSeries(group1);
-     chart->addSeries(group2);
-     if (nCount == 3) {
-         chart->addSeries(group3);
-     }
-     chart->addSeries(group1Test);
-     chart->addSeries(group2Test);
+    if (nCount == 3) {
+        chart->addSeries(group3Test);
+    }
 
-     if (nCount == 3) {
-         chart->addSeries(group3Test);
-     }
+    // 绘图的范围
+    // 取特征点的最值在往外增加一个 offset
+    double offset = 0.3;
+    double xMin = floor(features.col(0).min()) - offset;
+    double xMax = ceil(features.col(0).max()) + offset;
+    double yMin = floor(features.col(1).min()) - offset;
+    double yMax = ceil(features.col(1).max()) + offset;
 
-     // 绘图的范围
-     // 取特征点的最值在往外增加一个 offset
-     double offset = 0.3;
-     double xMin = floor(features.col(0).min()) - offset;
-     double xMax = ceil(features.col(0).max()) + offset;
-     double yMin = floor(features.col(1).min()) - offset;
-     double yMax = ceil(features.col(1).max()) + offset;
+    // 创建默认的坐标轴
+    chart->createDefaultAxes();
+    // 设置坐标轴的范围
+    chart->axisX()->setRange(xMin, xMax);
+    chart->axisY()->setRange(yMin, yMax);
+    // 不能设置主题了，否则会覆盖之前的颜色定义
+    // chart->setTheme(QChart::ChartThemeBlueIcy);
+    chart->setTitle(tr("Perception"));
+    // 启用动画
+    chart->setAnimationOptions(QChart::AllAnimations);
+    // 这个可以设置动画的时长，默认好像是 1000
+    // chart->setAnimationDuration(3000);
+    // 图例放在下方，图例中的 MakerShape 直接取自图表
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+    chart->setGeometry(ui->graphicsView->rect());
 
-     // 创建默认的坐标轴
-     chart->createDefaultAxes();
-     // 设置坐标轴的范围
-     chart->axisX()->setRange(xMin, xMax);
-     chart->axisY()->setRange(yMin, yMax);
-     // 不能设置主题了，否则会覆盖之前的颜色定义
-     // chart->setTheme(QChart::ChartThemeBlueIcy);
-     chart->setTitle(tr("Perception"));
-     // 启用动画
-     chart->setAnimationOptions(QChart::AllAnimations);
-     // 这个可以设置动画的时长，默认好像是 1000
-     // chart->setAnimationDuration(3000);
-     // 图例放在下方，图例中的 MakerShape 直接取自图表
-     chart->legend()->setAlignment(Qt::AlignBottom);
-     chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-     chart->setGeometry(ui->graphicsView->rect());
+    // 创建一个 QGraphicsScene 对象
+    QGraphicsScene *scene = new QGraphicsScene;
+    // 将 chart 添加到 scene 中
+    scene->addItem(chart);
+    // 连接 UI 中的 QGrapicsView 对象与 scene
+    ui->graphicsView->setScene(scene);
 
-     // 创建一个 QGraphicsScene 对象
-     QGraphicsScene *scene = new QGraphicsScene;
-     // 将 chart 添加到 scene 中
-     scene->addItem(chart);
-     // 连接 UI 中的 QGrapicsView 对象与 scene
-     ui->graphicsView->setScene(scene);
-
-     // pop up a messagebox to show result
-     QMessageBox resultBox;
-     QString resultString = tr("Accuracy:\t%1").arg(accuracy);
-     resultBox.setText(resultString);
-     resultBox.setWindowTitle(tr("KNN"));
-     resultBox.exec();
+    // pop up a messagebox to show result
+    QMessageBox resultBox;
+    QString resultString = tr("Accuracy:\t%1").arg(accuracy);
+    resultBox.setText(resultString);
+    resultBox.setWindowTitle(tr("KNN"));
+    resultBox.exec();
 }
