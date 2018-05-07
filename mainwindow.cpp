@@ -1041,46 +1041,40 @@ void MainWindow::on_actionMinimum_Distance_Classifier_triggered()
 }
 
 // KNN 分类器
-// 输入参数包括训练数据 trainData，训练标签 trainLabel
-// 测试数据 testData，测试标签 testData
-// 输出参数包括预测标签 predictedLabel，k 个邻居的下标
-void MainWindow::knn(const mat &trainData, const uvec &trainLabel, const Row<double> &testData,
-                     uword &predictedLabel, uvec &kNeighbor)
+// 输入参数包括训练数据 trainData，前两列为特征，最后一列为标签
+// 测试数据 testData，类似 trainData
+// 输出参数包括预测标签 predictedLabel
+// 以及 k 个邻居的的数据 kNeighborData
+void MainWindow::knn(const mat &trainData, const mat &testData,
+                     uword &predictedLabel, mat &kNeighborData)
 {
+    // 类别数
+    const uword nCount = trainData.col(trainData.n_cols - 1).max() + 1;
     // 训练样本数量
     const uword trainNum = trainData.n_rows;
-
-    // 这里使用 vec 是因为后面 histc 的参数需要，不想再做类型转换
-    vec trainLabelTemp(trainNum);
-    for (uword i = 0; i < trainLabel.n_elem; ++i) {
-        trainLabelTemp(i) = static_cast<double>(trainLabel(i));
-    }
 
     // 测试样本到训练样本的欧式距离
     vec euclideanDistance(trainNum);
     for (uword i = 0; i < trainNum; ++i) {
-        euclideanDistance(i) = norm(trainData.row(i).t() - testData.t());
+        euclideanDistance(i) = norm(trainData(i, span(0, 1)) - testData(0, span(0, 1)));
     }
     // 将距离和标签放在一起，写成增广矩阵
-    mat distance = join_horiz(euclideanDistance, trainLabelTemp);
+    mat distance = join_horiz(euclideanDistance, trainData);
     // 升序排序
-    // 先取出距离最小的前 k 个距离对应的下标
-    // 获取排序标签的之和只需要对 distance 的第一列排序，否则它返回的是整个矩阵排列后的每个元素的下标
-    uvec sortedInd = stable_sort_index(distance.col(0));
-    kNeighbor = sortedInd.rows(0, kNeighbor.n_elem - 1);
     // 将矩阵按照第一列排序，这样对应的标签也会跟着排序
-    distance = sort(distance);
-
+    distance = sortRows(distance);
+    // 排序后将 k 个邻居保存到变量 kNeigbor 中
+    kNeighborData = distance(span(0, kNeighborData.n_rows - 1), span(1, distance.n_cols - 1));
     // 找到前 k 个值里对应标签出现次数最多的就是预测的标签
-    predictedLabel = mode(distance(span(0, kNeighbor.n_elem - 1), 1));
-
+    predictedLabel = mode(kNeighborData.col(kNeighborData.n_cols - 1), nCount);
 }
 
 // 求向量 v 的众数，也就是出现频次最高的那个数
 // 输入类型必需为 vec
 // 返回值类型为 uword
 // 并且假设输入 v 的取值为标签的取值 {0, 1,..., N-1}
-uword MainWindow::mode(const vec &v)
+// nCount 为类别数量
+uword MainWindow::mode(const vec &v, const uword &nCount)
 {
     // 显然，只有一个元素，也就是 k = 1 的时候，直接返回就好了
     if (v.n_elem == 1) {
@@ -1088,9 +1082,7 @@ uword MainWindow::mode(const vec &v)
     } else {
         // linspace(0, max(v), max(v) + 1) 的向量为 (0, 1, 2,..., max(v) - 1)
         // 然后按照这个组距求直方图，histc 返回的是直方图中每个组的频数
-        uvec histcV = histc(v, linspace(0, max(v), max(v) + 1));
-        std::cout << "v:\n" << v << endl;
-        std::cout << "histV:\n" << histcV << endl;
+        uvec histcV = histc(v, linspace(0, nCount - 1, nCount));
         // 显然，频数最高的那个的下标对应的就是相应的标签了
         // 正好标签的取值为 0, 1, 2,..., N-1，和向量的下标是对应的
         return index_max(histcV);
@@ -1117,23 +1109,20 @@ void MainWindow::on_actionKNN_triggered()
     dataNorm.col(1) /= sum(dataNorm.col(1));
 
     // 只留一个样本用于测试，其他数据用于训练
-    Row<double> testData = data(data.n_rows - 1, span(0, 1));
-    Row<double> testDataNorm = dataNorm(dataNorm.n_rows - 1, span(0, 1));
+    mat testData = data.row(data.n_rows - 1);
+    mat testDataNorm = dataNorm.row(data.n_rows - 1);;
     
     // 二维数据，所以就只使用前两个特征
-    mat trainData = data(span(0, data.n_rows - 2), span(0, 1));
-    mat trainDataNorm = dataNorm(span(0, dataNorm.n_rows - 2), span(0, 1));
+    // 前两列为特征，最后一列为标签
+    mat trainData = join_horiz(data(span(0, data.n_rows - 2), span(0, 1)),
+                               data(span(0, data.n_rows - 2), data.n_cols - 1));
+    mat trainDataNorm = join_horiz(dataNorm(span(0, dataNorm.n_rows - 2), span(0, 1)),
+                                   dataNorm(span(0, dataNorm.n_rows - 2), dataNorm.n_cols - 1));
     uword trainNum = trainData.n_rows;
-    // 训练标签，数据类型是 double 型的，需要进行类型转换
-    vec trainLabelDouble = data(span(0, trainNum - 1), data.n_cols - 1);
-    uvec trainLabel(trainNum);
-    for (uword i = 0; i < trainNum; ++i) {
-        trainLabel(i) = static_cast<uword>(trainLabelDouble(i));
-    }
 
     // 标签取值为 {0, 1,..., N-1}
     // 类别数量为 nCount
-    const unsigned int nCount = trainLabel.max() + 1;
+    const uword nCount = data.col(data.n_cols - 1).max() + 1;
     // 从用户输入读入邻居的取值 k，默认值为 3．
     int k = QInputDialog::getInt(this, tr("K Neighboor Setting"), tr("K Neighboor:"), 3, 1, 10, 1);
 
@@ -1145,11 +1134,12 @@ void MainWindow::on_actionKNN_triggered()
         return;
     }
 
-    uvec kNeighborInd(k);
+    // k 个邻居的数据和标签
+    mat kNeighborData(k, 2);
     // 调用函数进行分类
-    knn(trainDataNorm, trainLabel, testDataNorm, predictedLabel, kNeighborInd);
-    // k 个近邻对应的数据
-    mat kNeighborData = trainData.rows(kNeighborInd);
+    knn(trainData, testData, predictedLabel, kNeighborData);
+    //knn(trainDataNorm, trainLabel, testDataNorm, predictedLabel, kNeighborInd);
+
     // 结果绘图
     QScatterSeries *group1 = new QScatterSeries;
     QScatterSeries *group2 = new QScatterSeries;
@@ -1157,14 +1147,14 @@ void MainWindow::on_actionKNN_triggered()
     QScatterSeries *groupTest = new QScatterSeries;
     QScatterSeries *groupNeighbor = new QScatterSeries;
 
-    // 读取数据，保存到对应的 series 里
+    // 读取数据，根据标签保存到对应的 series 里，注意进行类型转换
     // 训练数据
     for (uword i = 0; i < trainNum; ++i) {
-        if (trainLabel(i) == 0) {
+        if (static_cast<uword>(trainData(i, trainData.n_cols - 1)) == 0) {
             group1->append(trainData(i, 0), trainData(i, 1));
-        } else if (trainLabel(i) == 1) {
+        } else if (static_cast<uword>(trainData(i, trainData.n_cols - 1)) == 1) {
             group2->append(trainData(i, 0), trainData(i, 1));
-        } else if (trainLabel(i) == 2) {
+        } else if (static_cast<uword>(trainData(i, trainData.n_cols - 1)) == 2) {
             group3->append(trainData(i, 0), trainData(i, 1));
         }
         else {
@@ -1191,8 +1181,8 @@ void MainWindow::on_actionKNN_triggered()
     group2->setMarkerSize(10);
     group3->setMarkerSize(10);
     groupNeighbor->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
-    groupNeighbor->setOpacity(0.5);
-    groupNeighbor->setBorderColor(Qt::GlobalColor::darkCyan);
+    groupNeighbor->setOpacity(0.3);
+    groupNeighbor->setBorderColor(Qt::GlobalColor::black);
     groupTest->setMarkerSize(15);
     // 设置颜色，相同类别的颜色是一样的
     group1->setColor(Qt::GlobalColor::red);
@@ -1232,7 +1222,7 @@ void MainWindow::on_actionKNN_triggered()
     chart->axisY()->setRange(yMin, yMax);
     // 不能设置主题了，否则会覆盖之前的颜色定义
     // chart->setTheme(QChart::ChartThemeBlueIcy);
-    chart->setTitle(tr("Perception"));
+    chart->setTitle(tr("KNN"));
     // 启用动画
     chart->setAnimationOptions(QChart::AllAnimations);
     // 这个可以设置动画的时长，默认好像是 1000
@@ -1248,4 +1238,25 @@ void MainWindow::on_actionKNN_triggered()
     scene->addItem(chart);
     // 连接 UI 中的 QGrapicsView 对象与 scene
     ui->graphicsView->setScene(scene);
+}
+
+// 将矩阵 data 按照第一列排序，其他列的行跟第一列保持一致
+template<typename T>
+Mat<T> MainWindow::sortRows(const Mat<T> &data)
+{
+    Mat<T> result(arma::size(data));
+
+    // 第一列直接排序
+    result.col(0) = sort(data.col(0));
+    // 取得排序的下标
+    uvec ind = stable_sort_index(data.col(0));
+    // 临时变量，因为好像直接用 data.col(i)(ind) 会有语法错误？
+    Col<T> tmp;
+    // 遍历第 1 到最后一列，根据第一列的排序下标排序
+    for (uword i = 1; i < data.n_cols; ++i) {
+        tmp = data.col(i);
+        result.col(i) = tmp(ind);
+    }
+
+    return result;
 }

@@ -55,8 +55,8 @@ private slots:
 
     void on_actionMinimum_Distance_Classifier_triggered();
 
-    void knn(const mat &trainData, const uvec &trainLabel, const Row<double> &testData,
-             uword &predictedLabel, uvec &kNeighbor);
+    void knn(const mat &trainData, const mat &testData,
+             uword &predictedLabel, mat &kNeighborData);
 
     void on_actionKNN_triggered();
 
@@ -120,7 +120,9 @@ private:
     template <typename T>
     int sign(const T &x);
 
-    uword mode(const vec &v);
+    uword mode(const vec &v, const uword &nCount);
+    template <typename T>
+    Mat<T> sortRows(const Mat<T> &data);
 };
 
 #endif // MAINWINDOW_H
