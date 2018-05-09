@@ -1116,7 +1116,7 @@ void MainWindow::fisher(const int &N1, const vec &mu1, const mat &covariance1,
     QMessageBox resultBox;
     QString resultString = tr("Precision:\t%1\nRecall:\t\t%2\nAccuracy:\t%3\nF1:\t\t%4").arg(precision).arg(recall).arg(accuracy).arg(F1);
     resultBox.setText(resultString);
-    resultBox.setWindowTitle(tr("Fisher LDA"));
+    resultBox.setWindowTitle(tr("Fisher Evaluation Result"));
     resultBox.exec();
 }
 
