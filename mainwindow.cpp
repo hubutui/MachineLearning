@@ -742,7 +742,7 @@ void MainWindow::on_actionFisher_triggered()
 
     // 弹出一个消息框，显示测试结果
     QMessageBox resultBox;
-    QString resultString = tr("Precision:\t%1\nRecall:\t%2\nAccuracy:\t%3\nF1:\t%4").arg(precision).arg(recall).arg(accuracy).arg(F1);
+    QString resultString = tr("Precision:\t%1\nRecall:\t\t%2\nAccuracy:\t%3\nF1:\t\t%4").arg(precision).arg(recall).arg(accuracy).arg(F1);
     resultBox.setText(resultString);
     resultBox.setWindowTitle(tr("Fisher LDA"));
     resultBox.exec();
@@ -888,7 +888,7 @@ void MainWindow::on_actionPerception_triggered()
     perceptionTest(features, label, weight, predictedLabel, precision, recall, accuracy, F1);
     // 弹出一个消息框，显示测试结果
     QMessageBox resultBox;
-    QString resultString = tr("Precision:\t%1\nRecall:\t%2\nAccuracy:\t%3\nF1:\t%4").arg(precision).arg(recall).arg(accuracy).arg(F1);
+    QString resultString = tr("Precision:\t%1\nRecall:\t\t%2\nAccuracy:\t%3\nF1:\t\t%4").arg(precision).arg(recall).arg(accuracy).arg(F1);
     resultBox.setText(resultString);
     // resultBox.setWindowTitle(tr("Perception"));
     resultBox.exec();

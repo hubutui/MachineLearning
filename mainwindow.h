@@ -121,8 +121,11 @@ private:
     int sign(const T &x);
 
     uword mode(const vec &v, const uword &nCount);
+
     template <typename T>
     Mat<T> sortRows(const Mat<T> &data);
+
+    void kMeansCluster(const mat &data, const int &k);
 };
 
 #endif // MAINWINDOW_H

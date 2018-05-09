@@ -72,10 +72,18 @@
     <addaction name="actionMinimum_Distance_Classifier"/>
     <addaction name="actionKNN"/>
    </widget>
+   <widget class="QMenu" name="menuCluster">
+    <property name="title">
+     <string>Cluster</string>
+    </property>
+    <addaction name="actionK_Means"/>
+    <addaction name="actionISODATA"/>
+   </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Texture"/>
    <addaction name="menuLDA"/>
    <addaction name="menuNLDA"/>
+   <addaction name="menuCluster"/>
    <addaction name="menu_Help"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
@@ -134,6 +142,16 @@
   <action name="actionMinimum_Distance_Classifier">
    <property name="text">
     <string>Minimum Distance Classifier</string>
+   </property>
+  </action>
+  <action name="actionK_Means">
+   <property name="text">
+    <string>K Means</string>
+   </property>
+  </action>
+  <action name="actionISODATA">
+   <property name="text">
+    <string>ISODATA</string>
    </property>
   </action>
  </widget>
