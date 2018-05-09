@@ -64,6 +64,9 @@ private slots:
     void fisher(const int &N1, const vec &mu1, const mat &covariance1,
                 const int &N2, const vec &mu2, const mat &covariance2);
 
+    void perception(const int N1, const vec &mu1, const mat &covariance1,
+                    const int N2, const vec &mu2, const mat &covariance2);
+
 private:
     Ui::MainWindow *ui;
 

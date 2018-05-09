@@ -519,7 +519,7 @@ void MainWindow::on_actionFractal_dimension_triggered()
 
 // 将 CImg.h 的图像转换为 armadillo 的 Mat 矩阵
 // 因为 Mat 是 2D 矩阵，所以输入只能是灰度图像
-template<typename T>
+template <typename T>
 Mat<T> MainWindow::cimgToMat(const CImg<T> &img)
 {
     Mat<T> result(img.width(), img.height());
@@ -534,7 +534,7 @@ Mat<T> MainWindow::cimgToMat(const CImg<T> &img)
 
 // 根据 http://m2matlabdb.ma.tum.de/files.jsp?MC_ID=5&SC_ID=13 的 MATLAB 版本修改而来
 // 缺点是对于自相似程度较低的图像的结果误差较大
-template<typename T>
+template <typename T>
 double MainWindow::boxcount(const Mat<T> &img)
 {
     Mat<T> c = img;
@@ -626,7 +626,7 @@ void MainWindow::on_actionFisher_triggered()
 }
 
 // convert arma::Col to QVector
-template<typename T>
+template <typename T>
 Col<T> MainWindow::QVectorToCol(const QVector<T> &vector)
 {
     Col<T> result(vector.length());
@@ -640,7 +640,7 @@ Col<T> MainWindow::QVectorToCol(const QVector<T> &vector)
 
 // 符号函数
 // x >=0 时返回 1，否则返回 -1
-template<typename T>
+template <typename T>
 int MainWindow::sign(const T &x)
 {
     if (x >= 0) {
@@ -652,123 +652,13 @@ int MainWindow::sign(const T &x)
 
 void MainWindow::on_actionPerception_triggered()
 {
-    // 使用 iris 数据集，从纯文本文件读入
-    // 文件的格式为 tab 分隔的数值
-    // 按列算，前面的列为特征，最后一列为标签
-    // 这里都是只用两个特征，所以只读取前两列和最后一列
-    // 标签的取值为 {-1, 1}
-    // 这种类型的文件可以直接用 MATLAB/Octave 的 save 函数保存
-    // 例如 save('iris.txt', 'data', '-ascii')
-    QString dataFile = QFileDialog::getOpenFileName(
-                this, tr("Open data file"), QDir::currentPath());
-    if (dataFile.isEmpty()) {
-        QMessageBox::critical(this, tr("Error!"), tr("Please select a valid data file."));
-        return;
-    }
-    mat data;
-    data.load(dataFile.toStdString().data());
+    dlgRandomData2 = new DialogRandomData2;
 
-    mat features = data.cols(0, 1);
-    vec tmp = data.col(data.n_cols - 1);
-    ivec label(tmp.size());
-
-    for (uword i = 0; i < tmp.size(); ++i) {
-        label(i) = tmp(i);
-    }
-
-    // 权向量
-    vec weight(3, arma::fill::randn);
-    // 训练
-    double learningRate = 0.5;
-    int maxEpoch = 1000;
-    perceptionTrain(features, label, learningRate, maxEpoch, weight);
-
-    // 结果绘图，这部分的代码直接从 fisher 线性判别的那部分修改过来的
-    //
-    // 类别1，显然这里要用散点图
-    QScatterSeries *group1 = new QScatterSeries;
-    // 类别2
-    QScatterSeries *group2 = new QScatterSeries;
-
-    // 直接遍历，根据 label 取值的不同，将数据点加入到不同的 series
-    // 这样的代码会更加通用，样本的数量不再是固定的前50个为类别1，后50个为类别2
-    for (uword i = 0; i < label.n_elem; ++i) {
-        if (label(i) == -1) {
-            group1->append(features(i, 0), features(i, 1));
-        } else if (label(i) == 1) {
-            group2->append(features(i, 0), features(i, 1));
-        }  else {
-            // something might be wrong, but we don't care
-            // and do nothing
-        }
-    }
-
-    // 设置名称，在图例中显示
-    group1->setName(tr("Iris Setosa"));
-    // 设置 marker 为 10，默认为 15
-    group1->setMarkerSize(10);
-    group2->setName(tr("Iris Versicolour"));
-    // 设置 MarkerShape 为矩形，这样方便区分，group1 使用默认的圆形
-    group2->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
-    group2->setMarkerSize(10);
-
-    // 绘图的范围
-    // 取特征点的最值在往外增加一个 offset
-    double offset = 0.3;
-    double xMin = floor(features.col(0).min()) - offset;
-    double xMax = ceil(features.col(0).max()) + offset;
-    double yMin = floor(features.col(1).min()) - offset;
-    double yMax = ceil(features.col(1).max()) + offset;
-
-    // 分类界线
-    QLineSeries *border = new QLineSeries;
-    for (double x = xMin; x < 2*xMax; ++x) {
-        border->append(x, -weight(0)/weight(1)*x - weight(2)/weight(1));
-    }
-    border->setName(tr("Class Border"));
-    // 线型设置为虚线
-    border->setPen(Qt::DashLine);
-
-    // 新建一个 QChart 对象，并将各个图添加上去
-    QChart *chart = new QChart;
-    chart->addSeries(group1);
-    chart->addSeries(group2);
-    chart->addSeries(border);
-
-    // 创建默认的坐标轴
-    chart->createDefaultAxes();
-    // 设置坐标轴的范围
-    chart->axisX()->setRange(xMin, xMax);
-    chart->axisY()->setRange(yMin, yMax);
-    // 设置一个主题
-    chart->setTheme(QChart::ChartThemeBlueIcy);
-    chart->setTitle(tr("Perception"));
-    // 启用动画
-    chart->setAnimationOptions(QChart::AllAnimations);
-    // 这个可以设置动画的时长，默认好像是 1000
-    // chart->setAnimationDuration(3000);
-    // 图例放在下方，图例中的 MakerShape 直接取自图表
-    chart->legend()->setAlignment(Qt::AlignBottom);
-    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-    chart->setGeometry(ui->graphicsView->rect());
-
-    // 创建一个 QGraphicsScene 对象
-    QGraphicsScene *scene = new QGraphicsScene;
-    // 将 chart 添加到 scene 中
-    scene->addItem(chart);
-    // 连接 UI 中的 QGrapicsView 对象与 scene
-    ui->graphicsView->setScene(scene);
-
-    double precision, recall, accuracy, F1;
-    ivec predictedLabel(label.size());
-
-    perceptionTest(features, label, weight, predictedLabel, precision, recall, accuracy, F1);
-    // 弹出一个消息框，显示测试结果
-    QMessageBox resultBox;
-    QString resultString = tr("Precision:\t%1\nRecall:\t\t%2\nAccuracy:\t%3\nF1:\t\t%4").arg(precision).arg(recall).arg(accuracy).arg(F1);
-    resultBox.setText(resultString);
-    // resultBox.setWindowTitle(tr("Perception"));
-    resultBox.exec();
+    dlgRandomData2->show();
+    connect(dlgRandomData2,
+            SIGNAL(sendData(int, vec, mat, int, vec, mat)),
+            this,
+            SLOT(perception(int, vec, mat, int, vec, mat)));
 }
 
 void MainWindow::on_actionMinimum_Distance_Classifier_triggered()
@@ -1230,8 +1120,93 @@ void MainWindow::fisher(const int &N1, const vec &mu1, const mat &covariance1,
     resultBox.exec();
 }
 
+void MainWindow::perception(const int N1, const vec &mu1, const mat &covariance1, const int N2, const vec &mu2, const mat &covariance2)
+{
+    // 生成随机数据
+    mat data1 = mvnrnd(mu1, covariance1, N1);
+    mat data2 = mvnrnd(mu2, covariance2, N2);
+    // 拼接到一起
+    mat data = join_vert(data1.t(), data2.t());
+    // 生成对应的标签
+    ivec label1(data1.n_cols, arma::fill::ones);
+    label1 = -label1;
+    ivec label2(data2.n_cols, arma::fill::ones);
+    ivec label = join_vert(label1, label2);
+
+    // 权向量
+    vec weight(3, arma::fill::randn);
+    // 训练
+    double learningRate = 0.5;
+    uword maxEpoch = 1000;
+    perceptionTrain(data, label, learningRate, maxEpoch, weight);
+
+    //
+    // 结果绘图，参考 fisher 的结果绘图代码即可
+    QScatterSeries *group1 = new QScatterSeries;
+    QScatterSeries *group2 = new QScatterSeries;
+
+    for (uword i = 0; i < label.n_elem; ++i) {
+        if (label(i) == -1) {
+            group1->append(data(i, 0), data(i, 1));
+        } else if (label(i) == 1) {
+            group2->append(data(i, 0), data(i, 1));
+        } else {
+            // something might be wrong, but we don't care
+            // and do nothing
+        }
+    }
+
+    group1->setName(tr("Group 1"));
+    group2->setName(tr("Group 2"));
+    group1->setMarkerShape(QScatterSeries::MarkerShapeCircle);
+    group2->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
+
+    double offset = 0.3;
+    double xMin = floor(data.col(0).min()) - offset;
+    double xMax = ceil(data.col(0).max()) + offset;
+    double yMin = floor(data.col(1).min()) - offset;
+    double yMax = ceil(data.col(1).max()) + offset;
+
+    QLineSeries *border = new QLineSeries;
+    for (double x = xMin; x < 2*xMax; ++x) {
+        border->append(x, -weight(0)/weight(1)*x - weight(2)/weight(1));
+    }
+    border->setName(tr("Class Border"));
+    border->setPen(Qt::DashLine);
+
+    QChart *chart = new QChart;
+    chart->addSeries(group1);
+    chart->addSeries(group2);
+    chart->addSeries(border);
+
+    chart->createDefaultAxes();
+    chart->axisX()->setRange(xMin, xMax);
+    chart->axisY()->setRange(yMin, yMax);
+    chart->setTitle(tr("Perception"));
+    chart->setAnimationOptions(QChart::AllAnimations);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+    chart->setGeometry(ui->graphicsView->rect());
+
+    QGraphicsScene *scene = new QGraphicsScene;
+    scene->addItem(chart);
+    ui->graphicsView->setScene(scene);
+
+    // 测试结果
+    double precision, recall, accuracy, F1;
+    ivec predictedLabel(label.size());
+
+    perceptionTest(data, label, weight, predictedLabel, precision, recall, accuracy, F1);
+    // 弹出一个消息框，显示测试结果
+    QMessageBox resultBox;
+    QString resultString = tr("Precision:\t%1\nRecall:\t\t%2\nAccuracy:\t%3\nF1:\t\t%4").arg(precision).arg(recall).arg(accuracy).arg(F1);
+    resultBox.setText(resultString);
+    resultBox.setWindowTitle(tr("Perception Evaluation Result"));
+    resultBox.exec();
+}
+
 // 将矩阵 data 按照第一列排序，其他列的行跟第一列保持一致
-template<typename T>
+template <typename T>
 Mat<T> MainWindow::sortRows(const Mat<T> &data)
 {
     Mat<T> result(arma::size(data));
