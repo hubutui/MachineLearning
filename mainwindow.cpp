@@ -31,7 +31,9 @@ void MainWindow::setFileName(const QString &fileName)
 }
 
 // rgb to gray scale, adapt from qt's function
-int MainWindow::rgbToGray(const int &r, const int &g, const int &b)
+int MainWindow::rgbToGray(const int &r,
+                          const int &g,
+                          const int &b)
 {
     return (r * 11 + g * 16 + b * 5)/32;
 }
@@ -41,7 +43,10 @@ int MainWindow::rgbToGray(const int &r, const int &g, const int &b)
 // grayLevel 是 SI 的灰度级，一般取值为 8, 16, 32, 64, 128, 256 等
 // rowStep 和 colStep 分别是行方向和列方向的位移
 // 更多信息可以参考 https://github.com/palmerc/GLCM/blob/master/GLCM.m
-mat MainWindow::graycomatrix(const Mat<int> &SI, const int &grayLevel, const int &rowStep, const int &colStep)
+mat MainWindow::graycomatrix(const Mat<int> &SI,
+                             const int &grayLevel,
+                             const int &rowStep,
+                             const int &colStep)
 {
     // 用于保存结果的变量
     // 显然大小为 grayLevel x grayLevel
@@ -182,7 +187,11 @@ double MainWindow::getEntropy(const mat &glcmMatrix)
     return result;
 }
 
-void MainWindow::fisherTrain(const mat &data, const ivec &label, vec &weight, vec &dataProj, double &threshold)
+void MainWindow::fisherTrain(const mat &data,
+                             const ivec &label,
+                             vec &weight,
+                             vec &dataProj,
+                             double &threshold)
 {
     // 根据 label 获取类别 1 和类别 2 的数据，label 取值为 -1 的为类别 1，取值为 1 的为类别 2
     // 这里 label 取值 -1 是因为跟感知机的保持一致，这样就可以使用相同的数据文件
@@ -254,8 +263,15 @@ void MainWindow::fisherTrain(const mat &data, const ivec &label, vec &weight, ve
     // threshold = mean(dataProj);
 }
 
-void MainWindow::fisherTest(const mat &data, const vec &weight, const double &threshold, const ivec &label,
-                            ivec &predictedLabel, double &precision, double &recall, double &accuracy, double &F1)
+void MainWindow::fisherTest(const mat &data,
+                            const vec &weight,
+                            const double &threshold,
+                            const ivec &label,
+                            ivec &predictedLabel,
+                            double &precision,
+                            double &recall,
+                            double &accuracy,
+                            double &F1)
 {
     vec dataProj = data*weight;
     // 计算预测的标签
@@ -288,7 +304,11 @@ void MainWindow::fisherTest(const mat &data, const vec &weight, const double &th
 // maxEpoch 为最大迭代次数
 // weight 为所需要学习的权重，为 d+1 维向量
 // weight 的最后一维为偏置
-void MainWindow::perceptionTrain(const mat &data, const ivec &label, const double &learningRate, const int &maxEpoch, vec &weight)
+void MainWindow::perceptionTrain(const mat &data,
+                                 const ivec &label,
+                                 const double &learningRate,
+                                 const int &maxEpoch,
+                                 vec &weight)
 {
     // 输入数据的 size
     uword m = data.n_rows;
@@ -326,8 +346,14 @@ void MainWindow::perceptionTrain(const mat &data, const ivec &label, const doubl
 // 感知机测试函数
 // 输入 data, label, weight 等参数与训练函数的类似
 // 其他参数与 fisher 的测试函数类似
-void MainWindow::perceptionTest(const mat &data, const ivec &label, const vec &weight,
-                                ivec &predictedLabel, double &precision, double &recall, double &accuracy, double &F1)
+void MainWindow::perceptionTest(const mat &data,
+                                const ivec &label,
+                                const vec &weight,
+                                ivec &predictedLabel,
+                                double &precision,
+                                double &recall,
+                                double &accuracy,
+                                double &F1)
 {
     // 输入数据的 size
     uword m = data.n_rows;
@@ -438,7 +464,9 @@ void MainWindow::on_actionGLCM_triggered()
             SLOT(glcm(int, int, int)));
 }
 
-void MainWindow::glcm(const int &rowStep, const int &colStep, const int &grayLevel)
+void MainWindow::glcm(const int &rowStep,
+                      const int &colStep,
+                      const int &grayLevel)
 {
     CImg<int> img(fileName.toStdString().data());
     CImg<int> grayImg(img.width(), img.height());
@@ -812,8 +840,10 @@ void MainWindow::on_actionMinimum_Distance_Classifier_triggered()
 // 测试数据 testData，类似 trainData
 // 输出参数包括预测标签 predictedLabel
 // 以及 k 个邻居的的数据 kNeighborData
-void MainWindow::knn(const mat &trainData, const mat &testData,
-                     uword &predictedLabel, mat &kNeighborData)
+void MainWindow::knn(const mat &trainData,
+                     const mat &testData,
+                     uword &predictedLabel,
+                     mat &kNeighborData)
 {
     // 类别数
     const uword nCount = trainData.col(trainData.n_cols - 1).max() + 1;
@@ -841,7 +871,8 @@ void MainWindow::knn(const mat &trainData, const mat &testData,
 // 返回值类型为 uword
 // 并且假设输入 v 的取值为标签的取值 {0, 1,..., N-1}
 // nCount 为类别数量
-uword MainWindow::mode(const vec &v, const uword &nCount)
+uword MainWindow::mode(const vec &v,
+                       const uword &nCount)
 {
     // 显然，只有一个元素，也就是 k = 1 的时候，直接返回就好了
     if (v.n_elem == 1) {
@@ -1007,8 +1038,12 @@ void MainWindow::on_actionKNN_triggered()
     ui->graphicsView->setScene(scene);
 }
 
-void MainWindow::fisher(const int &N1, const vec &mu1, const mat &covariance1,
-                        const int &N2, const vec &mu2, const mat &covariance2)
+void MainWindow::fisher(const int &N1,
+                        const vec &mu1,
+                        const mat &covariance1,
+                        const int &N2,
+                        const vec &mu2,
+                        const mat &covariance2)
 {
     // 生成随机数据
     // armadillo 的 mvnrnd 函数与 matlab 的 mvnrnd 函数有区别
@@ -1120,7 +1155,12 @@ void MainWindow::fisher(const int &N1, const vec &mu1, const mat &covariance1,
     resultBox.exec();
 }
 
-void MainWindow::perception(const int N1, const vec &mu1, const mat &covariance1, const int N2, const vec &mu2, const mat &covariance2)
+void MainWindow::perception(const int N1,
+                            const vec &mu1,
+                            const mat &covariance1,
+                            const int N2,
+                            const vec &mu2,
+                            const mat &covariance2)
 {
     // 生成随机数据
     mat data1 = mvnrnd(mu1, covariance1, N1);
