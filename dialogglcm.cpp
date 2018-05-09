@@ -19,7 +19,8 @@ void DialogGLCM::on_buttonBox_accepted()
 }
 
 // 计算整数的指数函数
-int DialogGLCM::pow(const int &base, const int &exponent)
+int DialogGLCM::pow(const int &base,
+                    const int &exponent)
 {
     int result = 1;
 
