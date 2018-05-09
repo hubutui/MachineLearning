@@ -18,7 +18,12 @@ public:
     ~DialogRandomData2();
 
 signals:
-    void sendData(int N1, vec mu1, mat covariance1, int N2, vec mu2, mat covariance2);
+    void sendData(int N1,
+                  vec mu1,
+                  mat covariance1,
+                  int N2,
+                  vec mu2,
+                  mat covariance2);
 
 private slots:
 
