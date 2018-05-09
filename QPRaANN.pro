@@ -26,15 +26,18 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    dialogglcm.cpp
+    dialogglcm.cpp \
+    dialograndomdata2.cpp
 
 HEADERS += \
         mainwindow.h \
-    dialogglcm.h
+    dialogglcm.h \
+    dialograndomdata2.h
 
 FORMS += \
         mainwindow.ui \
-    dialogglcm.ui
+    dialogglcm.ui \
+    dialograndomdata2.ui
 
 unix: CONFIG += link_pkgconfig
 unix: PKGCONFIG += armadillo

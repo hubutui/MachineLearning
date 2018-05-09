@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include "dialogglcm.h"
+#include "dialograndomdata2.h"
 #include <QMainWindow>
 #include <QGraphicsScene>
 #include <QPixmap>
@@ -60,6 +61,9 @@ private slots:
 
     void on_actionKNN_triggered();
 
+    void fisher(const int &N1, const vec &mu1, const mat &covariance1,
+                const int &N2, const vec &mu2, const mat &covariance2);
+
 private:
     Ui::MainWindow *ui;
 
@@ -67,6 +71,8 @@ private:
     QString fileName;
 
     DialogGLCM *dlgGLCM;
+
+    DialogRandomData2 *dlgRandomData2;
 
     void setFileName(const QString &fileName);
 

@@ -583,7 +583,7 @@ double MainWindow::boxcount(const Mat<T> &img)
 
 // pad image with zeros from size MxN to M'xM',
 // where M' = 2^K
-template<typename T>
+template <typename T>
 CImg<T> MainWindow::padImage(const CImg<T> &img)
 {
     // if width == height, just scale
@@ -597,7 +597,7 @@ CImg<T> MainWindow::padImage(const CImg<T> &img)
     }
 }
 
-template<typename T>
+template <typename T>
 CImg<T> MainWindow::rgbToGray(const CImg<T> &img)
 {
     CImg<T> result(img.width(), img.height());
@@ -615,137 +615,14 @@ CImg<T> MainWindow::rgbToGray(const CImg<T> &img)
 
 void MainWindow::on_actionFisher_triggered()
 {
-    // 使用 iris 数据集，从纯文本文件读入
-    // 文件的格式为 tab 分隔的数值
-    // 按列算，前面的列为特征，最后一列为标签
-    // 这里都是只用两个特征，所以只读取前两列和最后一列
-    // 标签的取值为 {-1, 1}
-    // 这种类型的文件可以直接用 MATLAB/Octave 的 save 函数保存
-    // 例如 save('iris.txt', 'data', '-ascii')
-    QString dataFile = QFileDialog::getOpenFileName(
-                this, tr("Open data file"), QDir::currentPath());
-    if (dataFile.isEmpty()) {
-        QMessageBox::critical(this, tr("Error!"), tr("Please select a valid data file."));
-        return;
-    }
-    mat data;
-    data.load(dataFile.toStdString().data());
+    dlgRandomData2 = new DialogRandomData2;
 
-    mat features = data.cols(0, 1);
-    // 读取最后一列做为标签
-    vec tmp = data.col(data.n_cols - 1);
-    ivec label(tmp.size());
+    dlgRandomData2->show();
 
-    for (uword i = 0; i < tmp.size(); ++i) {
-        label(i) = tmp(i);
-    }
-    // 读取数据完毕
-
-    //    // 生成随机数据
-    // 实际上这里的代码应该用不上了，因为显然可以用 matlab 生成随机数据
-    // 然后保存到文件，再用上面的代码读取就好了
-    //    mat features(100, 2, arma::fill::randn);
-    //    uvec label(100, arma::fill::ones);
-    //    for (uword i = 0; i < label.size()/2; ++i) {
-    //        label(i) = 0;
-    //    }
-    //    // 随机数据生成完毕
-
-    // 存储输出结果
-    vec weight(features.n_cols);
-    vec dataProj(label.size());
-    double threshold;
-
-    fisherTrain(features, label, weight, dataProj, threshold);
-
-    // 存储测试结果
-    ivec predictedLabel(label.size());
-    double precision, recall, accuracy, F1;
-
-    fisherTest(features, weight, threshold, label, predictedLabel, precision, recall, accuracy, F1);
-
-    // 结果绘图
-    //
-    // 类别1，显然这里要用散点图
-    QScatterSeries *group1 = new QScatterSeries;
-    // 类别2
-    QScatterSeries *group2 = new QScatterSeries;
-
-    // 直接遍历，根据 label 取值的不同，将数据点加入到不同的 series
-    // 这样的代码会更加通用，样本的数量不再是固定的前50个为类别1，后50个为类别2
-    for (uword i = 0; i < label.n_elem; ++i) {
-        if (label(i) == -1) {
-            group1->append(features(i, 0), features(i, 1));
-        } else if (label(i) == 1) {
-            group2->append(features(i, 0), features(i, 1));
-        } else {
-            // something might be wrong, but we don't care
-            // and do nothing
-        }
-    }
-
-    // 设置名称，在图例中显示
-    group1->setName(tr("Iris Setosa"));
-    // 设置 marker 为 10，默认为 15
-    group1->setMarkerSize(10);
-    group2->setName(tr("Iris Versicolour"));
-    // 设置 MarkerShape 为矩形，这样方便区分，group1 使用默认的圆形
-    group2->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
-    group2->setMarkerSize(10);
-
-    // 绘图的范围
-    // 取特征点的最值在往外增加一个 offset
-    double offset = 0.3;
-    double xMin = floor(features.col(0).min()) - offset;
-    double xMax = ceil(features.col(0).max()) + offset;
-    double yMin = floor(features.col(1).min()) - offset;
-    double yMax = ceil(features.col(1).max()) + offset;
-
-    // 分类界线
-    QLineSeries *border = new QLineSeries;
-    for (double x = xMin; x < 2*xMax; ++x) {
-        border->append(x, -weight(0)/weight(1)*x + threshold/weight(1));
-    }
-    border->setName(tr("Class Border"));
-    // 线型设置为虚线
-    border->setPen(Qt::DashLine);
-
-    // 新建一个 QChart 对象，并将各个图添加上去
-    QChart *chart = new QChart;
-    chart->addSeries(group1);
-    chart->addSeries(group2);
-    chart->addSeries(border);
-
-    // 创建默认的坐标轴
-    chart->createDefaultAxes();
-    // 设置坐标轴的范围
-    chart->axisX()->setRange(xMin, xMax);
-    chart->axisY()->setRange(yMin, yMax);
-    // 设置一个主题
-    chart->setTheme(QChart::ChartThemeBlueIcy);
-    chart->setTitle(tr("Fisher Linear Discriminant Analysis"));
-    // 启用动画
-    chart->setAnimationOptions(QChart::AllAnimations);
-    // 这个可以设置动画的时长，默认好像是 1000
-    // chart->setAnimationDuration(3000);
-    // 图例放在下方，图例中的 MakerShape 直接取自图表
-    chart->legend()->setAlignment(Qt::AlignBottom);
-    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-    chart->setGeometry(ui->graphicsView->rect());
-
-    // 创建一个 QGraphicsScene 对象
-    QGraphicsScene *scene = new QGraphicsScene;
-    // 将 chart 添加到 scene 中
-    scene->addItem(chart);
-    // 连接 UI 中的 QGrapicsView 对象与 scene
-    ui->graphicsView->setScene(scene);
-
-    // 弹出一个消息框，显示测试结果
-    QMessageBox resultBox;
-    QString resultString = tr("Precision:\t%1\nRecall:\t\t%2\nAccuracy:\t%3\nF1:\t\t%4").arg(precision).arg(recall).arg(accuracy).arg(F1);
-    resultBox.setText(resultString);
-    resultBox.setWindowTitle(tr("Fisher LDA"));
-    resultBox.exec();
+    connect(dlgRandomData2,
+            SIGNAL(sendData(int, vec, mat, int, vec, mat)),
+            this,
+            SLOT(fisher(int, vec, mat, int, vec, mat)));
 }
 
 // convert arma::Col to QVector
@@ -1238,6 +1115,119 @@ void MainWindow::on_actionKNN_triggered()
     scene->addItem(chart);
     // 连接 UI 中的 QGrapicsView 对象与 scene
     ui->graphicsView->setScene(scene);
+}
+
+void MainWindow::fisher(const int &N1, const vec &mu1, const mat &covariance1,
+                        const int &N2, const vec &mu2, const mat &covariance2)
+{
+    // 生成随机数据
+    // armadillo 的 mvnrnd 函数与 matlab 的 mvnrnd 函数有区别
+    // armadillo 的参数 N 是只生成的矩阵的列数，而 matlab 的指的是行数
+    mat data1 = mvnrnd(mu1, covariance1, N1);
+    mat data2 = mvnrnd(mu2, covariance2, N2);
+    // 拼接到一起，因此这里拼接的时候需要注意转置
+    mat data = join_vert(data1.t(), data2.t());
+    // 生成对应的标签，注意应该取的是数据的列数
+    ivec label1(data1.n_cols, arma::fill::ones);
+    label1 = -label1;
+    ivec label2(data2.n_cols, arma::fill::ones);
+    ivec label = join_vert(label1, label2);
+
+    // 存储输出结果
+    vec weight(data.n_cols);
+    vec dataProj(label.n_rows);
+    double threshold;
+    // 训练
+    fisherTrain(data, label, weight, dataProj, threshold);
+    // 存储测试结果
+    ivec predictedLabel(label.n_rows);
+    double precision, recall, accuracy, F1;
+    // 测试
+    fisherTest(data, weight, threshold, label, predictedLabel, precision, recall, accuracy, F1);
+    //
+    // 结果绘图
+    //
+    // 类别1，显然这里要用散点图
+    QScatterSeries *group1 = new QScatterSeries;
+    // 类别2
+    QScatterSeries *group2 = new QScatterSeries;
+
+    // 直接遍历，根据 label 取值的不同，将数据点加入到不同的 series
+    // 这样的代码会更加通用，样本的数量不再是固定的前50个为类别1，后50个为类别2
+    for (uword i = 0; i < label.n_elem; ++i) {
+        if (label(i) == -1) {
+            group1->append(data(i, 0), data(i, 1));
+        } else if (label(i) == 1) {
+            group2->append(data(i, 0), data(i, 1));
+        } else {
+            // something might be wrong, but we don't care
+            // and do nothing
+        }
+    }
+
+    // 设置名称，在图例中显示
+    group1->setName(tr("Group 1"));
+    group2->setName(tr("Group 2"));
+    // 设置 MarkerShape
+    group1->setMarkerShape(QScatterSeries::MarkerShapeCircle);
+    group2->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
+    // 设置颜色
+    //    group1->setColor(Qt::GlobalColor::red);
+    //    group2->setColor(Qt::GlobalColor::green);
+
+    // 绘图的范围
+    // 取特征点的最值在往外增加一个 offset
+    double offset = 0.3;
+    double xMin = floor(data.col(0).min()) - offset;
+    double xMax = ceil(data.col(0).max()) + offset;
+    double yMin = floor(data.col(1).min()) - offset;
+    double yMax = ceil(data.col(1).max()) + offset;
+
+    // 分类界线
+    QLineSeries *border = new QLineSeries;
+    for (double x = xMin; x < 2*xMax; ++x) {
+        border->append(x, -weight(0)/weight(1)*x + threshold/weight(1));
+    }
+    border->setName(tr("Class Border"));
+    // 线型设置为虚线
+    border->setPen(Qt::DashLine);
+
+    // 新建一个 QChart 对象，并将各个图添加上去
+    QChart *chart = new QChart;
+    chart->addSeries(group1);
+    chart->addSeries(group2);
+    chart->addSeries(border);
+
+    // 创建默认的坐标轴
+    chart->createDefaultAxes();
+    // 设置坐标轴的范围
+    chart->axisX()->setRange(xMin, xMax);
+    chart->axisY()->setRange(yMin, yMax);
+    // 设置一个主题
+    //chart->setTheme(QChart::ChartThemeBlueIcy);
+    chart->setTitle(tr("Fisher Linear Discriminant Analysis"));
+    // 启用动画
+    chart->setAnimationOptions(QChart::AllAnimations);
+    // 这个可以设置动画的时长，默认好像是 1000
+    // chart->setAnimationDuration(3000);
+    // 图例放在下方，图例中的 MakerShape 直接取自图表
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+    chart->setGeometry(ui->graphicsView->rect());
+
+    // 创建一个 QGraphicsScene 对象
+    QGraphicsScene *scene = new QGraphicsScene;
+    // 将 chart 添加到 scene 中
+    scene->addItem(chart);
+    // 连接 UI 中的 QGrapicsView 对象与 scene
+    ui->graphicsView->setScene(scene);
+
+    // 弹出一个消息框，显示测试结果
+    QMessageBox resultBox;
+    QString resultString = tr("Precision:\t%1\nRecall:\t\t%2\nAccuracy:\t%3\nF1:\t\t%4").arg(precision).arg(recall).arg(accuracy).arg(F1);
+    resultBox.setText(resultString);
+    resultBox.setWindowTitle(tr("Fisher LDA"));
+    resultBox.exec();
 }
 
 // 将矩阵 data 按照第一列排序，其他列的行跟第一列保持一致
