@@ -27,17 +27,20 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
     dialogglcm.cpp \
-    dialograndomdata2.cpp
+    dialograndomdata2.cpp \
+    dialograndomdata3.cpp
 
 HEADERS += \
         mainwindow.h \
     dialogglcm.h \
-    dialograndomdata2.h
+    dialograndomdata2.h \
+    dialograndomdata3.h
 
 FORMS += \
         mainwindow.ui \
     dialogglcm.ui \
-    dialograndomdata2.ui
+    dialograndomdata2.ui \
+    dialograndomdata3.ui
 
 unix: CONFIG += link_pkgconfig
 unix: PKGCONFIG += armadillo
