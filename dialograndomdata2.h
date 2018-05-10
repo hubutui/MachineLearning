@@ -2,6 +2,7 @@
 #define DIALOGRANDOMDATA2_H
 
 #include <QDialog>
+
 #include <armadillo>
 using namespace arma;
 
