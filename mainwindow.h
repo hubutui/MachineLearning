@@ -3,6 +3,7 @@
 
 #include "dialogglcm.h"
 #include "dialograndomdata2.h"
+#include "dialograndomdata3.h"
 #include <QMainWindow>
 #include <QGraphicsScene>
 #include <QPixmap>
@@ -79,6 +80,16 @@ private slots:
                     const vec &mu2,
                     const mat &covariance2);
 
+    void minimumDistanceClassifier(int N1,
+                                   vec mu1,
+                                   mat covariance1,
+                                   int N2,
+                                   vec mu2,
+                                   mat covariance2,
+                                   int N3,
+                                   vec mu3,
+                                   mat covariance3);
+
 private:
     Ui::MainWindow *ui;
 
@@ -88,6 +99,8 @@ private:
     DialogGLCM *dlgGLCM;
 
     DialogRandomData2 *dlgRandomData2;
+
+    DialogRandomData3 *dlgRandomData3;
 
     void setFileName(const QString &fileName);
 
@@ -157,13 +170,6 @@ private:
                         double &recall,
                         double &accuracy,
                         double &F1);
-
-    void minDistanceClassifier(const mat &data,
-                               const uvec &label,
-                               const double &trainRate,
-                               const unsigned int nCount,
-                               uvec &predictedLabel,
-                               double &accuracy);
 
     template <typename T>
     Col<T> QVectorToCol(const QVector<T> &vector);

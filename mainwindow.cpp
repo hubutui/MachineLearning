@@ -379,55 +379,6 @@ void MainWindow::perceptionTest(const mat &data,
     F1 = 2 * precision * recall / (precision + recall);
 }
 
-// 最小距离分类器
-// data 和 label 分别为输入数据和标签
-// trainRate 表示将多少数据当作已知的，剩余的数据用于分类
-// nCount 为类别数
-// predictedLabel 是预测的 label
-// medianPoint 是每个类的中心点，打算用来绘制分类界线
-// 分类界线为两个类的中心点连线的垂直平分线
-void MainWindow::minDistanceClassifier(const mat &data,
-                                       const uvec &label,
-                                       const double &trainRate,
-                                       const unsigned int nCount,
-                                       uvec &predictedLabel,
-                                       double &accuracy)
-{
-    const int trainNum = data.n_rows*trainRate;
-    const int testNum = data.n_rows - trainNum;
-
-    mat trainData = data.rows(0, trainNum - 1);
-    mat testData = data.rows(trainNum, data.n_rows - 1);
-    uvec trainLabel = label.rows(0, trainNum - 1);
-    uvec testLabel = label.rows(trainNum, data.n_rows - 1);
-
-    // 计算均值
-    // 一共是 nCount 个类别，data.n_cols 个特征
-    // 所以用 nCount x data.n_cols 的矩阵来保存
-    mat meanValue(nCount, data.n_cols);
-
-    // 找到 label == i 的训练数据，并计算它们的均值
-    for (uword i = 0; i < nCount; ++i) {
-        meanValue.row(i) = mean(trainData.rows(arma::find(trainLabel == i)));
-    }
-
-    // 计算测试样本与各类别的距离
-    vec distance(nCount);
-    for (uword i = 0; i < testData.n_rows; ++i) {
-        for (unsigned int j = 0; j < nCount; ++j) {
-            distance(j) = norm(testData.row(i) - meanValue.row(j));
-        }
-        // 最小距离的下标就是其预测所属的类别
-        predictedLabel(i) = distance.index_min();
-    }
-
-    // 计算 predictedLabel 与 testLabel 相同的个数就是分类正确的个数
-    // 然后就可以计算正确率
-
-    double correctNum = sum(testLabel == predictedLabel);
-    accuracy = correctNum/testNum;
-}
-
 void MainWindow::on_action_Open_triggered()
 {
     // get image file name
@@ -691,148 +642,13 @@ void MainWindow::on_actionPerception_triggered()
 
 void MainWindow::on_actionMinimum_Distance_Classifier_triggered()
 {
-    // 读取数据
-    QString dataFile = QFileDialog::getOpenFileName(
-                this, tr("Open data file"), QDir::currentPath());
-    if (dataFile.isEmpty()) {
-        QMessageBox::critical(this, tr("Error!"), tr("Please select a valid data file."));
-        return;
-    }
-    mat data;
-    data.load(dataFile.toStdString().data());
+    dlgRandomData3 = new DialogRandomData3;
 
-    // 二维数据，所以就只使用前两个特征
-    mat features = data.cols(0, 1);
-    // 试试使用所有的特征
-    //    mat features = data.cols(0, data.n_cols - 2);
-    // 训练比率
-    const double trainRate = 0.7;
-    uword trainNum = trainRate*data.n_rows;
-    vec tmp = data.col(data.n_cols - 1);
-    uvec label(tmp.size());
-
-    for (uword i = 0; i < tmp.size(); ++i) {
-        label(i) = tmp(i);
-    }
-
-    // 标签取值为 {0, 1,..., N-1}
-    // 类别数量为 N
-    const unsigned int nCount = label.max() + 1;
-    // 预测标签，就是测试的数据
-    uvec predictedLabel(label.size() - trainNum);
-    // 测试结果
-    double accuracy;
-    // 仅作二分类和三分类
-    if (nCount != 2 && nCount != 3) {
-        QMessageBox::critical(this, tr("Error"), tr("Only 2 or 3 groups."));
-        return;
-    }
-    // 调用函数，进行分类
-    minDistanceClassifier(features, label, trainRate, nCount, predictedLabel, accuracy);
-
-    // 结果绘图
-    QScatterSeries *group1 = new QScatterSeries;
-    QScatterSeries *group2 = new QScatterSeries;
-
-    QScatterSeries *group1Test = new QScatterSeries;
-    QScatterSeries *group2Test = new QScatterSeries;
-    QScatterSeries *group3 = new QScatterSeries;
-    QScatterSeries *group3Test = new QScatterSeries;
-
-    // 读取数据，保存到对应的 series 里
-    // 训练数据
-    for (uword i = 0; i < trainNum; ++i) {
-        if (label(i) == 0) {
-            group1->append(features(i, 0), features(i, 1));
-        } else if (label(i) == 1) {
-            group2->append(features(i, 0), features(i, 1));
-        } else if (label(i) == 2) {
-            group3->append(features(i, 0), features(i, 1));
-        }
-        else {
-            // something might be wrong, but we don't care
-            // and do nothing
-        }
-    }
-
-    // 测试数据
-    for (uword i = trainNum; i < label.n_elem; ++i) {
-        if (label(i) == 0) {
-            group1Test->append(features(i, 0), features(i, 1));
-        } else if (label(i) == 1) {
-            group2Test->append(features(i, 0), features(i, 1));
-        } else if (label(i) == 2) {
-            group3Test->append(features(i, 0), features(i, 1));
-        }
-        else {
-            // do nothing
-        }
-    }
-
-    // 设置名称
-    group1->setName(tr("Group1"));
-    group2->setName(tr("Group2"));
-    group3->setName(tr("Group3"));
-    group1Test->setName(tr("Group1 Test"));
-    group2Test->setName(tr("Group2 Test"));
-    group3Test->setName(tr("Group3 Test"));
-    // 设置 Marker
-    group1->setMarkerSize(10);
-    group2->setMarkerSize(10);
-    group3->setMarkerSize(10);
-    group1Test->setMarkerSize(15);
-    group2Test->setMarkerSize(15);
-    group3Test->setMarkerSize(15);
-
-    group1->setColor(Qt::GlobalColor::red);
-    group2->setColor(Qt::GlobalColor::green);
-    group3->setColor(Qt::GlobalColor::blue);
-    group1Test->setColor(group1->color());
-    group2Test->setColor(group2->color());
-    group3Test->setColor(group3->color());
-
-    QChart *chart = new QChart;
-    chart->addSeries(group1);
-    chart->addSeries(group2);
-    chart->addSeries(group1Test);
-    chart->addSeries(group2Test);
-
-    if (nCount == 3) {
-        chart->addSeries(group3);
-        chart->addSeries(group3Test);
-    }
-
-    // 绘图的范围
-    // 取特征点的最值在往外增加一个 offset
-    double offset = 0.3;
-    double xMin = floor(features.col(0).min()) - offset;
-    double xMax = ceil(features.col(0).max()) + offset;
-    double yMin = floor(features.col(1).min()) - offset;
-    double yMax = ceil(features.col(1).max()) + offset;
-
-    // 创建默认的坐标轴
-    chart->createDefaultAxes();
-    // 设置坐标轴的范围
-    chart->axisX()->setRange(xMin, xMax);
-    chart->axisY()->setRange(yMin, yMax);
-    // 不能设置主题了，否则会覆盖之前的颜色定义
-    // chart->setTheme(QChart::ChartThemeBlueIcy);
-    chart->setTitle(tr("Minimum Distance Classifier"));
-    // 启用动画
-    chart->setAnimationOptions(QChart::AllAnimations);
-    // 这个可以设置动画的时长，默认好像是 1000
-    // chart->setAnimationDuration(3000);
-    // 图例放在下方，图例中的 MakerShape 直接取自图表
-    chart->legend()->setAlignment(Qt::AlignBottom);
-    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-    chart->setGeometry(ui->graphicsView->rect());
-
-    // 创建一个 QGraphicsScene 对象
-    QGraphicsScene *scene = new QGraphicsScene;
-    // 将 chart 添加到 scene 中
-    scene->addItem(chart);
-    // 连接 UI 中的 QGrapicsView 对象与 scene
-    ui->graphicsView->setScene(scene);
+    dlgRandomData3->show();
+    connect(dlgRandomData3,
+            SIGNAL(sendData(int, vec, mat, int, vec, mat, int, vec, mat)),
+            this,
+            SLOT(minimumDistanceClassifier(int, vec, mat, int, vec, mat, int, vec, mat)));
 }
 
 // KNN 分类器
@@ -1243,6 +1059,186 @@ void MainWindow::perception(const int N1,
     resultBox.setText(resultString);
     resultBox.setWindowTitle(tr("Perception Evaluation Result"));
     resultBox.exec();
+}
+
+void MainWindow::minimumDistanceClassifier(int N1, vec mu1, mat covariance1, int N2, vec mu2, mat covariance2, int N3, vec mu3, mat covariance3)
+{
+    // 生成随机数据
+    mat data1 = mvnrnd(mu1, covariance1, N1);
+    mat data2 = mvnrnd(mu2, covariance2, N2);
+    mat data3 = mvnrnd(mu3, covariance3, N3);
+    // 拼接到一起
+    mat data = join_vert(join_vert(data1.t(), data2.t()), data3.t());
+    // 标签
+    vec label1(data1.n_cols, arma::fill::zeros);
+    vec label2(data2.n_cols, arma::fill::ones);
+    vec label3(data3.n_cols);
+    label3.fill(2);
+    vec label = join_vert(join_vert(label1, label2), label3);
+
+    // 将数据和标签拼接在一起，最后一列为标签
+    mat dataNlabel = join_horiz(data, label);
+    // 打乱顺序
+    dataNlabel = shuffle(dataNlabel);
+    // 训练样本数，简单一点，只用最后一个样本作为测试
+    const uword trainNum = dataNlabel.n_rows - 1;
+    // 类别数
+    const int nCount = 3;
+
+    // 训练与测试数据及其标签
+    mat trainData = dataNlabel(span(0, trainNum - 1), span(0, dataNlabel.n_cols - 2));
+    Row<double> testData = dataNlabel(dataNlabel.n_rows - 1, span(0, dataNlabel.n_cols - 2));
+    // 因为后面需要做标签的比较，所以还是得用整型，用浮点型无法比较 ==
+    vec trainLabelDouble = dataNlabel(span(0, trainNum - 1), dataNlabel.n_cols - 1);
+    uvec trainLabel(trainLabelDouble.n_rows, trainLabelDouble.n_cols);
+    for (uword i = 0; i < trainNum; ++i) {
+        trainLabel(i) = static_cast<uword>(trainLabelDouble(i));
+    }
+    // uword testLabel = dataNlabel(dataNlabel.n_rows - 1, dataNlabel.n_cols - 1);
+
+    // 计算均值
+    // 一共是 nCount 个类别，data.n_cols 个特征
+    // 所以用 nCount x data.n_cols 的矩阵来保存
+    mat meanValue(nCount, dataNlabel.n_cols - 1);
+    // 找到 label == i 的训练样本，并计算他们的均值
+    // 也就是计算每一类样本的距离中心
+    for (uword i = 0; i < nCount; ++i) {
+        meanValue.row(i) = mean(trainData.rows(arma::find(trainLabel == i)));
+    }
+
+    // 计算测试样本到各类别的距离，并存储到 distance 向量中
+    // 距离最小的那个的下标对应的就是预测的标签
+    vec distance(nCount);
+    for (uword i = 0; i < nCount; ++i) {
+        distance(i) = norm(testData - meanValue.row(i));
+    }
+    uword predictedLabel = distance.index_min();
+
+    // 结果绘图
+    QScatterSeries *group1 = new QScatterSeries;
+    QScatterSeries *group2 = new QScatterSeries;
+    QScatterSeries *group3 = new QScatterSeries;
+    QScatterSeries *groupTest = new QScatterSeries;
+    QScatterSeries *groupMean1 = new QScatterSeries;
+    QScatterSeries *groupMean2 = new QScatterSeries;
+    QScatterSeries *groupMean3 = new QScatterSeries;
+    QLineSeries *line1 = new QLineSeries;
+    QLineSeries *line2 = new QLineSeries;
+    QLineSeries *line3 = new QLineSeries;
+
+    // 读取数据，保存到对应的 series 里
+    // 训练数据
+    for (uword i = 0; i < trainNum; ++i) {
+        if (trainLabel(i) == 0) {
+            group1->append(trainData(i, 0), trainData(i, 1));
+        } else if (trainLabel(i) == 1) {
+            group2->append(trainData(i, 0), trainData(i, 1));
+        } else if (trainLabel(i) == 2) {
+            group3->append(trainData(i, 0), trainData(i, 1));
+        } else {
+            // something might be wrong, but we don't care
+            // and do nothing
+        }
+    }
+    // 训练样本
+    groupTest->append(testData(0, 0), testData(0, 1));
+    group1->setColor(Qt::GlobalColor::red);
+    group2->setColor(Qt::GlobalColor::green);
+    group3->setColor(Qt::GlobalColor::blue);
+    // 根据预测标签决定测试样本的颜色
+    if (predictedLabel == 0) {
+        groupTest->setColor(group1->color());
+    } else if (predictedLabel == 1) {
+        groupTest->setColor(group2->color());
+    } else if (predictedLabel == 2) {
+        groupTest->setColor(group3->color());
+    } else {
+    // do nothing
+    }
+    // 每个类别的中心点
+    groupMean1->append(meanValue(0, 0), meanValue(0, 1));
+    groupMean2->append(meanValue(1, 0), meanValue(1, 1));
+    groupMean3->append(meanValue(2, 0), meanValue(2, 1));
+    // 中心点到测试样本的连接线
+    line1->append(meanValue(0, 0), meanValue(0, 1));
+    line1->append(testData(0, 0), testData(0, 1));
+    line2->append(meanValue(1, 0), meanValue(1, 1));
+    line2->append(testData(0, 0), testData(0, 1));
+    line3->append(meanValue(2, 0), meanValue(2, 1));
+    line3->append(testData(0, 0), testData(0, 1));
+
+    // 换个 markerShape 和大小，这样才好对比
+    const double factor = 1.5f;
+    groupTest->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
+    groupTest->setMarkerSize(factor*group1->markerSize());
+    groupMean1->setMarkerSize(factor*group1->markerSize());
+    groupMean2->setMarkerSize(factor*group2->markerSize());
+    groupMean3->setMarkerSize(factor*group3->markerSize());
+    // 设置类别中心点的颜色
+    groupMean1->setColor(group1->color());
+    groupMean2->setColor(group2->color());
+    groupMean3->setColor(group3->color());
+    // 连线的颜色用与类别相同的颜色
+    line1->setColor(group1->color());
+    line2->setColor(group2->color());
+    line3->setColor(group3->color());
+
+    // 设置名称
+    group1->setName(tr("Group1"));
+    group2->setName(tr("Group2"));
+    group3->setName(tr("Group3"));
+    groupTest->setName(tr("Test"));
+
+    QChart *chart = new QChart;
+    chart->addSeries(group1);
+    chart->addSeries(group2);
+    chart->addSeries(group3);
+    chart->addSeries(groupMean1);
+    chart->addSeries(groupMean2);
+    chart->addSeries(groupMean3);
+    chart->addSeries(groupTest);
+    chart->addSeries(line1);
+    chart->addSeries(line2);
+    chart->addSeries(line3);
+    // 隐藏不需要的图例
+    chart->legend()->markers(groupMean1)[0]->setVisible(false);
+    chart->legend()->markers(groupMean2)[0]->setVisible(false);
+    chart->legend()->markers(groupMean3)[0]->setVisible(false);
+    chart->legend()->markers(line1)[0]->setVisible(false);
+    chart->legend()->markers(line2)[0]->setVisible(false);
+    chart->legend()->markers(line3)[0]->setVisible(false);
+
+    // 绘图的范围
+    // 取特征点的最值在往外增加一个 offset
+    double offset = 0.3;
+    double xMin = floor(data.col(0).min()) - offset;
+    double xMax = ceil(data.col(0).max()) + offset;
+    double yMin = floor(data.col(1).min()) - offset;
+    double yMax = ceil(data.col(1).max()) + offset;
+
+    // 创建默认的坐标轴
+    chart->createDefaultAxes();
+    // 设置坐标轴的范围
+    chart->axisX()->setRange(xMin, xMax);
+    chart->axisY()->setRange(yMin, yMax);
+
+    // 不能设置主题，否则会覆盖之前的颜色设定
+    // chart->setTheme(QChart::ChartThemeBlueIcy);
+    chart->setTitle(tr("Minimum Distance Classifier"));
+    // 启用动画
+    chart->setAnimationOptions(QChart::AllAnimations);
+    // 图例放在下方，图例中的 MakerShape 直接取自图表
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+    // 图表大小为 graphicsView 的大小
+    chart->setGeometry(ui->graphicsView->rect());
+
+    // 创建一个 QGraphicsScene 对象
+    QGraphicsScene *scene = new QGraphicsScene;
+    // 将 chart 添加到 scene 中
+    scene->addItem(chart);
+    // 连接 UI 中的 QGrapicsView 对象与 scene
+    ui->graphicsView->setScene(scene);
 }
 
 // 将矩阵 data 按照第一列排序，其他列的行跟第一列保持一致
