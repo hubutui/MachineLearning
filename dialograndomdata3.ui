@@ -236,14 +236,14 @@
            <item row="1" column="0">
             <widget class="QDoubleSpinBox" name="doubleSpinBox3Mux">
              <property name="value">
-              <double>3.000000000000000</double>
+              <double>8.000000000000000</double>
              </property>
             </widget>
            </item>
            <item row="2" column="0">
             <widget class="QDoubleSpinBox" name="doubleSpinBox3Muy">
              <property name="value">
-              <double>6.000000000000000</double>
+              <double>0.000000000000000</double>
              </property>
             </widget>
            </item>
