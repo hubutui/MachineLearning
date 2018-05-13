@@ -651,37 +651,6 @@ void MainWindow::on_actionMinimum_Distance_Classifier_triggered()
             SLOT(minimumDistanceClassifier(int, vec, mat, int, vec, mat, int, vec, mat)));
 }
 
-// KNN 分类器
-// 输入参数包括训练数据 trainData，前两列为特征，最后一列为标签
-// 测试数据 testData，类似 trainData
-// 输出参数包括预测标签 predictedLabel
-// 以及 k 个邻居的的数据 kNeighborData
-void MainWindow::knn(const mat &trainData,
-                     const mat &testData,
-                     uword &predictedLabel,
-                     mat &kNeighborData)
-{
-    // 类别数
-    const uword nCount = trainData.col(trainData.n_cols - 1).max() + 1;
-    // 训练样本数量
-    const uword trainNum = trainData.n_rows;
-
-    // 测试样本到训练样本的欧式距离
-    vec euclideanDistance(trainNum);
-    for (uword i = 0; i < trainNum; ++i) {
-        euclideanDistance(i) = norm(trainData(i, span(0, 1)) - testData(0, span(0, 1)));
-    }
-    // 将距离和标签放在一起，写成增广矩阵
-    mat distance = join_horiz(euclideanDistance, trainData);
-    // 升序排序
-    // 将矩阵按照第一列排序，这样对应的标签也会跟着排序
-    distance = sortRows(distance);
-    // 排序后将 k 个邻居保存到变量 kNeigbor 中
-    kNeighborData = distance(span(0, kNeighborData.n_rows - 1), span(1, distance.n_cols - 1));
-    // 找到前 k 个值里对应标签出现次数最多的就是预测的标签
-    predictedLabel = mode(kNeighborData.col(kNeighborData.n_cols - 1), nCount);
-}
-
 // 求向量 v 的众数，也就是出现频次最高的那个数
 // 输入类型必需为 vec
 // 返回值类型为 uword
@@ -705,153 +674,13 @@ uword MainWindow::mode(const vec &v,
 
 void MainWindow::on_actionKNN_triggered()
 {
-    // 读取数据
-    QString dataFile = QFileDialog::getOpenFileName(
-                this, tr("Open data file"), QDir::currentPath());
-    if (dataFile.isEmpty()) {
-        QMessageBox::critical(this, tr("Error!"), tr("Please select a valid data file."));
-        return;
-    }
-    mat data;
-    data.load(dataFile.toStdString().data());
+    dlgRandomData3 = new DialogRandomData3;
 
-    // 将数据按行打乱，等下取最后一项为测试数据，其他为训练数据，就可以算是随机取一个样本作为测试了
-    data = shuffle(data);
-    // 数据归一化，避免某个特征的取值太大而支配了距离的取值
-    mat dataNorm = data;
-    dataNorm.col(0) /= sum(dataNorm.col(0));
-    dataNorm.col(1) /= sum(dataNorm.col(1));
-
-    // 只留一个样本用于测试，其他数据用于训练
-    mat testData = data.row(data.n_rows - 1);
-    mat testDataNorm = dataNorm.row(data.n_rows - 1);;
-    
-    // 二维数据，所以就只使用前两个特征
-    // 前两列为特征，最后一列为标签
-    mat trainData = join_horiz(data(span(0, data.n_rows - 2), span(0, 1)),
-                               data(span(0, data.n_rows - 2), data.n_cols - 1));
-    mat trainDataNorm = join_horiz(dataNorm(span(0, dataNorm.n_rows - 2), span(0, 1)),
-                                   dataNorm(span(0, dataNorm.n_rows - 2), dataNorm.n_cols - 1));
-    uword trainNum = trainData.n_rows;
-
-    // 标签取值为 {0, 1,..., N-1}
-    // 类别数量为 nCount
-    const uword nCount = data.col(data.n_cols - 1).max() + 1;
-    // 从用户输入读入邻居的取值 k，默认值为 3．
-    int k = QInputDialog::getInt(this, tr("K Neighboor Setting"), tr("K Neighboor:"), 3, 1, 10, 1);
-
-    // 预测标签，只有一个样本，所以就是一个值而已了
-    uword predictedLabel;
-    // 仅作二分类和三分类
-    if (nCount != 2 && nCount != 3) {
-        QMessageBox::critical(this, tr("Error"), tr("Only 2 or 3 groups."));
-        return;
-    }
-
-    // k 个邻居的数据和标签
-    mat kNeighborData(k, 2);
-    // 调用函数进行分类
-    knn(trainData, testData, predictedLabel, kNeighborData);
-    //knn(trainDataNorm, trainLabel, testDataNorm, predictedLabel, kNeighborInd);
-
-    // 结果绘图
-    QScatterSeries *group1 = new QScatterSeries;
-    QScatterSeries *group2 = new QScatterSeries;
-    QScatterSeries *group3 = new QScatterSeries;
-    QScatterSeries *groupTest = new QScatterSeries;
-    QScatterSeries *groupNeighbor = new QScatterSeries;
-
-    // 读取数据，根据标签保存到对应的 series 里，注意进行类型转换
-    // 训练数据
-    for (uword i = 0; i < trainNum; ++i) {
-        if (static_cast<uword>(trainData(i, trainData.n_cols - 1)) == 0) {
-            group1->append(trainData(i, 0), trainData(i, 1));
-        } else if (static_cast<uword>(trainData(i, trainData.n_cols - 1)) == 1) {
-            group2->append(trainData(i, 0), trainData(i, 1));
-        } else if (static_cast<uword>(trainData(i, trainData.n_cols - 1)) == 2) {
-            group3->append(trainData(i, 0), trainData(i, 1));
-        }
-        else {
-            // something might be wrong, but we don't care
-            // and do nothing
-        }
-    }
-
-    for (uword i = 0; i < kNeighborData.n_rows; ++i) {
-        groupNeighbor->append(kNeighborData(i, 0), kNeighborData(i, 1));
-    }
-
-    // 测试数据
-    groupTest->append(testData(0), testData(1));
-
-    // 设置名称
-    group1->setName(tr("Group1"));
-    group2->setName(tr("Group2"));
-    group3->setName(tr("Group3"));
-    groupNeighbor->setName(tr("Neighbor"));
-    groupTest->setName(tr("Test"));
-    // 设置 Marker
-    group1->setMarkerSize(10);
-    group2->setMarkerSize(10);
-    group3->setMarkerSize(10);
-    groupNeighbor->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
-    groupNeighbor->setOpacity(0.3);
-    groupNeighbor->setBorderColor(Qt::GlobalColor::black);
-    groupTest->setMarkerSize(15);
-    // 设置颜色，相同类别的颜色是一样的
-    group1->setColor(Qt::GlobalColor::red);
-    group2->setColor(Qt::GlobalColor::green);
-    group3->setColor(Qt::GlobalColor::blue);
-    if (predictedLabel == 0) {
-        groupTest->setColor(group1->color());
-    } else if (predictedLabel == 1) {
-        groupTest->setColor(group2->color());
-    } else if (predictedLabel == 2) {
-        groupTest->setColor(group3->color());
-    } else {
-
-    }
-
-    QChart *chart = new QChart;
-    chart->addSeries(group1);
-    chart->addSeries(group2);
-    if (nCount == 3) {
-        chart->addSeries(group3);
-    }
-    chart->addSeries(groupNeighbor);
-    chart->addSeries(groupTest);
-
-    // 绘图的范围
-    // 取特征点的最值在往外增加一个 offset
-    double offset = 0.3;
-    double xMin = floor(trainData.col(0).min()) - offset;
-    double xMax = ceil(trainData.col(0).max()) + offset;
-    double yMin = floor(trainData.col(1).min()) - offset;
-    double yMax = ceil(trainData.col(1).max()) + offset;
-
-    // 创建默认的坐标轴
-    chart->createDefaultAxes();
-    // 设置坐标轴的范围
-    chart->axisX()->setRange(xMin, xMax);
-    chart->axisY()->setRange(yMin, yMax);
-    // 不能设置主题了，否则会覆盖之前的颜色定义
-    // chart->setTheme(QChart::ChartThemeBlueIcy);
-    chart->setTitle(tr("KNN"));
-    // 启用动画
-    chart->setAnimationOptions(QChart::AllAnimations);
-    // 这个可以设置动画的时长，默认好像是 1000
-    // chart->setAnimationDuration(3000);
-    // 图例放在下方，图例中的 MakerShape 直接取自图表
-    chart->legend()->setAlignment(Qt::AlignBottom);
-    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-    chart->setGeometry(ui->graphicsView->rect());
-
-    // 创建一个 QGraphicsScene 对象
-    QGraphicsScene *scene = new QGraphicsScene;
-    // 将 chart 添加到 scene 中
-    scene->addItem(chart);
-    // 连接 UI 中的 QGrapicsView 对象与 scene
-    ui->graphicsView->setScene(scene);
+    dlgRandomData3->show();
+    connect(dlgRandomData3,
+            SIGNAL(sendData(int, vec, mat, int, vec, mat, int, vec, mat)),
+            this,
+            SLOT(KNN(int, vec, mat, int, vec, mat, int, vec, mat)));
 }
 
 void MainWindow::fisher(const int &N1,
@@ -1231,6 +1060,156 @@ void MainWindow::minimumDistanceClassifier(int N1, vec mu1, mat covariance1, int
     chart->legend()->setAlignment(Qt::AlignBottom);
     chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
     // 图表大小为 graphicsView 的大小
+    chart->setGeometry(ui->graphicsView->rect());
+
+    // 创建一个 QGraphicsScene 对象
+    QGraphicsScene *scene = new QGraphicsScene;
+    // 将 chart 添加到 scene 中
+    scene->addItem(chart);
+    // 连接 UI 中的 QGrapicsView 对象与 scene
+    ui->graphicsView->setScene(scene);
+}
+
+void MainWindow::KNN(const int &N1, const vec &mu1, const mat &covariance1, const int &N2, const vec &mu2, const mat &covariance2, const int &N3, const vec &mu3, const mat &covariance3)
+{
+    // 生成随机数据
+    mat data1 = mvnrnd(mu1, covariance1, N1);
+    mat data2 = mvnrnd(mu2, covariance2, N2);
+    mat data3 = mvnrnd(mu3, covariance3, N3);
+    // 拼接到一起
+    mat data = join_vert(join_vert(data1.t(), data2.t()), data3.t());
+    // 标签
+    vec label1(data1.n_cols, arma::fill::zeros);
+    vec label2(data2.n_cols, arma::fill::ones);
+    vec label3(data3.n_cols);
+    label3.fill(2);
+    vec label = join_vert(join_vert(label1, label2), label3);
+
+    // 将数据和标签拼接在一起，最后一列为标签
+    mat dataNlabel = join_horiz(data, label);
+    // 打乱顺序
+    dataNlabel = shuffle(dataNlabel);
+    // 训练样本数，简单一点，只用最后一个样本作为测试
+    const uword trainNum = dataNlabel.n_rows - 1;
+    // 类别数
+    const int nCount = 3;
+    // 训练样本
+    mat trainData = dataNlabel.rows(0, trainNum - 1);
+    // 测试样本
+    Row<double> testData = dataNlabel.row(dataNlabel.n_rows - 1);
+
+    // 测试样本到训练样本的欧式距离
+    vec euclideanDistance(trainNum);
+    for (uword i = 0; i < trainNum; ++i) {
+        euclideanDistance(i) = norm(trainData(i, span(0, 1)) - testData.cols(0, 1));
+    }
+    // 将距离和数据放在一起，写成增广矩阵
+    mat distance = join_horiz(euclideanDistance, trainData);
+    // 升序排序
+    // 将矩阵按照第一列排序，这样对应的标签也会跟着排序
+    distance = sortRows(distance);
+    // 从用户输入读取邻居个数 k，默认值为 3，最小值为 1，最大值为 10
+    const int kMax = std::max(std::max(N1, N2), N3);
+    const int kMin = 1;
+    const int step = 1;
+    const int kDefault = 3;
+    int k = QInputDialog::getInt(this,
+                                 tr("K Neighboor Setting"),
+                                 tr("K Neighboor:"),
+                                 kDefault,
+                                 kMin,
+                                 kMax,
+                                 step);
+
+    // 排序后将 k 个邻居保存到变量 kNeigborData 中
+    mat kNeighborData = distance(span(0, k - 1), span(1, distance.n_cols - 1));
+    // 找到前 k 个值里对应标签出现次数最多的就是预测的标签
+    uword predictedLabel = mode(kNeighborData.col(kNeighborData.n_cols - 1), nCount);
+
+    // 结果绘图
+    QScatterSeries *group1 = new QScatterSeries;
+    QScatterSeries *group2 = new QScatterSeries;
+    QScatterSeries *group3 = new QScatterSeries;
+    QScatterSeries *groupTest = new QScatterSeries;
+    QScatterSeries *groupKNeighbor = new QScatterSeries;
+    // 读取数据，保存到对应的 series 里
+    // 训练数据
+    for (uword i = 0; i < trainNum; ++i) {
+        if (static_cast<uword>(trainData(i, trainData.n_cols - 1)) == 0) {
+            group1->append(trainData(i, 0), trainData(i, 1));
+        } else if (static_cast<uword>(trainData(i, trainData.n_cols - 1)) == 1) {
+            group2->append(trainData(i, 0), trainData(i, 1));
+        } else if (static_cast<uword>(trainData(i, trainData.n_cols - 1)) == 2) {
+            group3->append(trainData(i, 0), trainData(i, 1));
+        } else {
+            // something might be wrong, but we don't care
+            // and do nothing
+        }
+    }
+    // 训练样本和测试样本
+    groupTest->append(testData(0, 0), testData(0, 1));
+    group1->setColor(Qt::GlobalColor::red);
+    group2->setColor(Qt::GlobalColor::green);
+    group3->setColor(Qt::GlobalColor::blue);
+    // 根据预测标签决定测试样本的颜色
+    if (predictedLabel == 0) {
+        groupTest->setColor(group1->color());
+    } else if (predictedLabel == 1) {
+        groupTest->setColor(group2->color());
+    } else if (predictedLabel == 2) {
+        groupTest->setColor(group3->color());
+    } else {
+    // do nothing
+    }
+    groupTest->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
+    const qreal factor = 1.5f;
+    groupTest->setMarkerSize(factor*groupTest->markerSize());
+    // K 个邻居
+    for (uword i = 0; i < kNeighborData.n_rows; ++i) {
+        groupKNeighbor->append(kNeighborData(i, 0), kNeighborData(i, 1));
+    }
+    // 因为邻居点与训练样本点是重合的，所以设置一下透明色
+    groupKNeighbor->setOpacity(0.5);
+    groupKNeighbor->setBorderColor(Qt::GlobalColor::cyan);
+    groupKNeighbor->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
+    groupKNeighbor->setMarkerSize(factor*group1->markerSize());
+    // 设置名称
+    group1->setName(tr("Group1"));
+    group2->setName(tr("Group2"));
+    group3->setName(tr("Group3"));
+    groupTest->setName(tr("Test"));
+    groupKNeighbor->setName(tr("Neighbor"));
+
+    QChart *chart = new QChart;
+    chart->addSeries(group1);
+    chart->addSeries(group2);
+    chart->addSeries(group3);
+    chart->addSeries(groupTest);
+    chart->addSeries(groupKNeighbor);
+
+    // 绘图的范围
+    // 取特征点的最值在往外增加一个 offset
+    double offset = 0.3;
+    double xMin = floor(trainData.col(0).min()) - offset;
+    double xMax = ceil(trainData.col(0).max()) + offset;
+    double yMin = floor(trainData.col(1).min()) - offset;
+    double yMax = ceil(trainData.col(1).max()) + offset;
+
+    // 创建默认的坐标轴
+    chart->createDefaultAxes();
+    // 设置坐标轴的范围
+    chart->axisX()->setRange(xMin, xMax);
+    chart->axisY()->setRange(yMin, yMax);
+    // 不能设置主题了，否则会覆盖之前的颜色定义
+    // chart->setTheme(QChart::ChartThemeBlueIcy);
+    chart->setTitle(tr("KNN"));
+    // 启用动画
+    chart->setAnimationOptions(QChart::AllAnimations);
+    // 这个可以设置动画的时长，默认好像是 1000
+    // chart->setAnimationDuration(3000);
+    // 图例放在下方，图例中的 MakerShape 直接取自图表
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
     chart->setGeometry(ui->graphicsView->rect());
 
     // 创建一个 QGraphicsScene 对象

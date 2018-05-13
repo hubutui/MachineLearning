@@ -59,11 +59,6 @@ private slots:
 
     void on_actionMinimum_Distance_Classifier_triggered();
 
-    void knn(const mat &trainData,
-             const mat &testData,
-             uword &predictedLabel,
-             mat &kNeighborData);
-
     void on_actionKNN_triggered();
 
     void fisher(const int &N1,
@@ -89,6 +84,16 @@ private slots:
                                    int N3,
                                    vec mu3,
                                    mat covariance3);
+
+    void KNN(const int &N1,
+             const vec &mu1,
+             const mat &covariance1,
+             const int &N2,
+             const vec &mu2,
+             const mat &covariance2,
+             const int &N3,
+             const vec &mu3,
+             const mat &covariance3);
 
 private:
     Ui::MainWindow *ui;
