@@ -95,6 +95,18 @@ private slots:
              const vec &mu3,
              const mat &covariance3);
 
+    void kMeans(const int &N1,
+                const vec &mu1,
+                const mat &covariance1,
+                const int &N2,
+                const vec &mu2,
+                const mat &covariance2,
+                const int &N3,
+                const vec &mu3,
+                const mat &covariance3);
+
+    void on_actionK_Means_triggered();
+
 private:
     Ui::MainWindow *ui;
 

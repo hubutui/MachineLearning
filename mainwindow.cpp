@@ -1220,6 +1220,157 @@ void MainWindow::KNN(const int &N1, const vec &mu1, const mat &covariance1, cons
     ui->graphicsView->setScene(scene);
 }
 
+// K 均值聚类，实现方法参考 http://aqibsaeed.github.io/2016-06-24-k-means/
+// 主要步骤：
+// 1. 随机选择初始聚类中心
+// 2. 根据样本点到聚类中心的距离
+// 将样本点分给不同的聚类
+// 3. 重新计算聚类中心（用均值作为聚类中心）
+// 4. 重复步骤2和3，直到收敛
+// 收敛条件是聚类中心不再变化或者变化很小
+// 也是设置最大的迭代次数
+void MainWindow::kMeans(const int &N1,
+                        const vec &mu1,
+                        const mat &covariance1,
+                        const int &N2,
+                        const vec &mu2,
+                        const mat &covariance2,
+                        const int &N3,
+                        const vec &mu3,
+                        const mat &covariance3)
+{
+    // 生成随机数据
+    mat data1 = mvnrnd(mu1, covariance1, N1);
+    mat data2 = mvnrnd(mu2, covariance2, N2);
+    mat data3 = mvnrnd(mu3, covariance3, N3);
+    // 拼接到一起
+    mat data = join_vert(join_vert(data1.t(), data2.t()), data3.t());
+    // 标签
+    vec label1(data1.n_cols, arma::fill::zeros);
+    vec label2(data2.n_cols, arma::fill::ones);
+    vec label3(data3.n_cols);
+    label3.fill(2);
+    vec label = join_vert(join_vert(label1, label2), label3);
+    // 将数据和标签拼接在一起，最后一列为标签
+    mat dataNlabel = join_horiz(data, label);
+
+    // 从用户处读取聚类的类别数，默认为 3
+    const int kMax = 10;
+    const int kMin = 2;
+    const int step = 1;
+    const int kDefault = 3;
+    uword k = QInputDialog::getInt(this,
+                                 tr("K Means Cluster Setting"),
+                                 tr("Cluster number:"),
+                                 kDefault,
+                                 kMin,
+                                 kMax,
+                                 step);
+
+    // 打乱顺序
+    dataNlabel = shuffle(dataNlabel);
+    // 设置初始的聚类中心
+    mat centroids = dataNlabel.rows(0, k - 1);
+    //
+    const uword maxEpoch = 100;
+    for (uword epoch = 0; epoch < maxEpoch; ++epoch) {
+        // 计算各个点到聚类中心的距离
+        // 用一个 dataNlabel.n_rows x k 的矩阵保存所有样本点到聚类中心的距离
+        mat euclideanDistance(dataNlabel.n_rows, k);
+        for (uword i = 0; i < dataNlabel.n_rows; ++i) {
+            for (uword j = 0; j < k; ++j) {
+                euclideanDistance(i, j) = norm(dataNlabel(i, span(0, 1)) - centroids(j, span(0, 1)));
+            }
+        }
+        // 根据各个样本点到聚类中心的距离分类
+        // 也就是更新 label
+        // 求最小值对应的下标
+        uvec indMin = index_min(euclideanDistance, 1);
+        // 根据下标更新 label
+        for (uword i = 0; i < dataNlabel.n_rows; ++i) {
+            dataNlabel(i, dataNlabel.n_cols - 1) = static_cast<double>(indMin(i));
+        }
+        // 重新计算聚类中心
+        // 标签取值为 0, 1, 2，所以只需要找到 label < 0.5, label > 0.5 && label < 1.5 和 label > 1.5
+        // 的样本就对了．不能直接使用 == 作为判断条件是因为这是浮点数
+        uvec tmpInd = arma::find(dataNlabel.col(dataNlabel.n_cols - 1) < 0.5f);
+        mat tmpData = dataNlabel(span(0, dataNlabel.n_rows - 1), span(0, 1));
+        centroids(0) = mean(tmpData(tmpInd));
+        tmpInd = arma::find(dataNlabel.col(dataNlabel.n_cols - 1) > 0.5f &&
+                            dataNlabel.col(dataNlabel.n_cols - 1) < 1.5f);
+        centroids(1) = mean(tmpData(tmpInd));
+        tmpInd = arma::find(dataNlabel.col(dataNlabel.n_cols - 1) > 1.5f);
+        centroids(2) = mean(tmpData(tmpInd));
+        // 最后再把数据打乱
+        dataNlabel = shuffle(dataNlabel);
+    }
+    // 结果绘图
+    QScatterSeries *group1 = new QScatterSeries;
+    QScatterSeries *group2 = new QScatterSeries;
+    QScatterSeries *group3 = new QScatterSeries;
+    QScatterSeries *groupCentroids = new QScatterSeries;
+    // 读取数据，保存到对应的 series 里
+    for (uword i = 0; i < dataNlabel.n_rows; ++i) {
+        if (static_cast<uword>(dataNlabel(i, dataNlabel.n_cols - 1)) == 0) {
+            group1->append(dataNlabel(i, 0), dataNlabel(i, 1));
+        } else if (static_cast<uword>(dataNlabel(i, dataNlabel.n_cols - 1)) == 1) {
+            group2->append(dataNlabel(i, 0), dataNlabel(i, 1));
+        } else if (static_cast<uword>(dataNlabel(i, dataNlabel.n_cols - 1)) == 2) {
+            group3->append(dataNlabel(i, 0), dataNlabel(i, 1));
+        } else {
+            // something might be wrong, but we don't care
+            // and do nothing
+        }
+    }
+    // 聚类中心
+    for (uword i = 0; i < centroids.n_rows; ++i) {
+        groupCentroids->append(centroids(i, 0), centroids(i, 1));
+    }
+    // 设置颜色
+    group1->setColor(Qt::GlobalColor::red);
+    group2->setColor(Qt::GlobalColor::green);
+    group3->setColor(Qt::GlobalColor::blue);
+    groupCentroids->setColor(Qt::GlobalColor::cyan);
+    // 设置名称
+    group1->setName(tr("Group1"));
+    group2->setName(tr("Group2"));
+    group3->setName(tr("Group3"));
+    groupCentroids->setName(tr("Centroids"));
+
+    QChart *chart = new QChart;
+    chart->addSeries(group1);
+    chart->addSeries(group2);
+    chart->addSeries(group3);
+    chart->addSeries(groupCentroids);
+    // 绘图的范围
+    // 取特征点的最值在往外增加一个 offset
+    double offset = 0.3;
+    double xMin = floor(dataNlabel.col(0).min()) - offset;
+    double xMax = ceil(dataNlabel.col(0).max()) + offset;
+    double yMin = floor(dataNlabel.col(1).min()) - offset;
+    double yMax = ceil(dataNlabel.col(1).max()) + offset;
+
+    // 创建默认的坐标轴
+    chart->createDefaultAxes();
+    // 设置坐标轴的范围
+    chart->axisX()->setRange(xMin, xMax);
+    chart->axisY()->setRange(yMin, yMax);
+    chart->setTitle(tr("K Means Cluster"));
+    // 启用动画
+    chart->setAnimationOptions(QChart::AllAnimations);
+    // 图例放在下方，图例中的 MakerShape 直接取自图表
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+    chart->setGeometry(ui->graphicsView->rect());
+
+    // 创建一个 QGraphicsScene 对象
+    QGraphicsScene *scene = new QGraphicsScene;
+    // 将 chart 添加到 scene 中
+    scene->addItem(chart);
+    // 连接 UI 中的 QGrapicsView 对象与 scene
+    ui->graphicsView->setScene(scene);
+}
+
 // 将矩阵 data 按照第一列排序，其他列的行跟第一列保持一致
 template <typename T>
 Mat<T> MainWindow::sortRows(const Mat<T> &data)
@@ -1239,4 +1390,15 @@ Mat<T> MainWindow::sortRows(const Mat<T> &data)
     }
 
     return result;
+}
+
+void MainWindow::on_actionK_Means_triggered()
+{
+    dlgRandomData3 = new DialogRandomData3;
+
+    dlgRandomData3->show();
+    connect(dlgRandomData3,
+            SIGNAL(sendData(int, vec, mat, int, vec, mat, int, vec, mat)),
+            this,
+            SLOT(kMeans(int, vec, mat, int, vec, mat, int, vec, mat)));
 }
