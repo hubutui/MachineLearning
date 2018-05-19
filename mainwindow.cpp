@@ -1255,6 +1255,47 @@ void MainWindow::kMeans(const int &N1,
     // 将数据和标签拼接在一起，最后一列为标签
     mat dataNlabel = join_horiz(data, label);
 
+    // 将原始数据绘制出来
+    QScatterSeries *groupGroundTruth[3];
+    // 创建 3 个 group
+    for (uword i = 0; i < 3; ++i) {
+        groupGroundTruth[i] = new QScatterSeries;
+        groupGroundTruth[i]->setName(tr("Group%1").arg(i));
+    }
+    // 根据 label 添加到不同的 group 中
+    for (uword i = 0; i < dataNlabel.n_rows; ++i) {
+        for (uword j = 0; j < 3; ++j) {
+            if (static_cast<uword>(dataNlabel(i, dataNlabel.n_cols - 1) == j)) {
+                groupGroundTruth[j]->append(dataNlabel(i, 0), dataNlabel(i, 1));
+            }
+        }
+    }
+    QChart *chart = new QChart;
+    for (uword i = 0; i < 3; ++i) {
+        chart->addSeries(groupGroundTruth[i]);
+    }
+    chart->setTheme(QChart::ChartThemeBlueIcy);
+    // 绘图的范围
+    // 取特征点的最值在往外增加一个 offset
+    double offset = 0.3;
+    double xMin = floor(dataNlabel.col(0).min()) - offset;
+    double xMax = ceil(dataNlabel.col(0).max()) + offset;
+    double yMin = floor(dataNlabel.col(1).min()) - offset;
+    double yMax = ceil(dataNlabel.col(1).max()) + offset;
+
+    chart->createDefaultAxes();
+    chart->axisX()->setRange(xMin, xMax);
+    chart->axisY()->setRange(yMin, yMax);
+    chart->setTitle(tr("K Means Cluster - Original Data"));
+    chart->setAnimationOptions(QChart::AllAnimations);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+    chart->setGeometry(ui->graphicsView->rect());
+
+    QGraphicsScene *scene = new QGraphicsScene;
+    scene->addItem(chart);
+    ui->graphicsView->setScene(scene);
+
     // 从用户处读取聚类的类别数，默认为 3
     const int kMax = 10;
     const int kMin = 2;
@@ -1270,10 +1311,10 @@ void MainWindow::kMeans(const int &N1,
 
     // 打乱顺序
     dataNlabel = shuffle(dataNlabel);
-    // 设置初始的聚类中心
+    // 设置初始的聚类中心，直接取前 k 个样本
     mat centroids = dataNlabel(span(0, k - 1), span(0, 1));
     //
-    const uword maxEpoch = 100;
+    const uword maxEpoch = 1024;
     for (uword epoch = 0; epoch < maxEpoch; ++epoch) {
         // 计算各个点到聚类中心的距离
         // 用一个 dataNlabel.n_rows x k 的矩阵保存所有样本点到聚类中心的距离
@@ -1294,14 +1335,6 @@ void MainWindow::kMeans(const int &N1,
         // 重新计算聚类中心
         // 标签取值为 0, 1, 2，所以只需要找到 label < 0.5, label > 0.5 && label < 1.5 和 label > 1.5
         // 的样本就对了．不能直接使用 == 作为判断条件是因为这是浮点数
-//        uvec tmpInd = arma::find(dataNlabel.col(dataNlabel.n_cols - 1) < 0.5f);
-//        mat tmpData = dataNlabel(span(0, dataNlabel.n_rows - 1), span(0, 1));
-//        centroids(0) = mean(tmpData(tmpInd));
-//        tmpInd = arma::find(dataNlabel.col(dataNlabel.n_cols - 1) > 0.5f &&
-//                            dataNlabel.col(dataNlabel.n_cols - 1) < 1.5f);
-//        centroids(1) = mean(tmpData(tmpInd));
-//        tmpInd = arma::find(dataNlabel.col(dataNlabel.n_cols - 1) > 1.5f);
-//        centroids(2) = mean(tmpData(tmpInd));
         for (uword i = 0; i < k; ++i) {
             const double offset = 0.5;
             uvec tmpIndRow = arma::find(dataNlabel.col(dataNlabel.n_cols - 1) > i - offset &&
@@ -1326,37 +1359,13 @@ void MainWindow::kMeans(const int &N1,
             }
         }
     }
-//    QScatterSeries *group1 = new QScatterSeries;
-//    QScatterSeries *group2 = new QScatterSeries;
-//    QScatterSeries *group3 = new QScatterSeries;
-//    QScatterSeries *groupCentroids = new QScatterSeries;
-//    // 读取数据，保存到对应的 series 里
-//    for (uword i = 0; i < dataNlabel.n_rows; ++i) {
-//        if (static_cast<uword>(dataNlabel(i, dataNlabel.n_cols - 1)) == 0) {
-//            group1->append(dataNlabel(i, 0), dataNlabel(i, 1));
-//        } else if (static_cast<uword>(dataNlabel(i, dataNlabel.n_cols - 1)) == 1) {
-//            group2->append(dataNlabel(i, 0), dataNlabel(i, 1));
-//        } else if (static_cast<uword>(dataNlabel(i, dataNlabel.n_cols - 1)) == 2) {
-//            group3->append(dataNlabel(i, 0), dataNlabel(i, 1));
-//        } else {
-//            // something might be wrong, but we don't care
-//            // and do nothing
-//        }
-//    }
+
     // 聚类中心
     QScatterSeries *groupCentroids = new QScatterSeries;
     for (uword i = 0; i < centroids.n_rows; ++i) {
         groupCentroids->append(centroids(i, 0), centroids(i, 1));
     }
-//    // 设置颜色
-//    group1->setColor(Qt::GlobalColor::red);
-//    group2->setColor(Qt::GlobalColor::green);
-//    group3->setColor(Qt::GlobalColor::blue);
-//    groupCentroids->setColor(Qt::GlobalColor::cyan);
-    // 设置名称
-//    group1->setName(tr("Group1"));
-//    group2->setName(tr("Group2"));
-//    group3->setName(tr("Group3"));
+
     for (uword i = 0; i < k; ++i) {
         group[i]->setName(tr("Group%1").arg(i+1));
     }
@@ -1365,40 +1374,30 @@ void MainWindow::kMeans(const int &N1,
     const qreal factor = 1.5f;
     groupCentroids->setMarkerSize(factor*groupCentroids->markerSize());
 
-    QChart *chart = new QChart;
-//    chart->addSeries(group1);
-//    chart->addSeries(group2);
-//    chart->addSeries(group3);
+    QChart *chartResult = new QChart;
     for (uword i = 0; i < k; ++i) {
-        chart->addSeries(group[i]);
+        chartResult->addSeries(group[i]);
     }
-    chart->addSeries(groupCentroids);
-    chart->setTheme(QChart::ChartThemeBlueIcy);
-    // 绘图的范围
-    // 取特征点的最值在往外增加一个 offset
-    double offset = 0.3;
-    double xMin = floor(dataNlabel.col(0).min()) - offset;
-    double xMax = ceil(dataNlabel.col(0).max()) + offset;
-    double yMin = floor(dataNlabel.col(1).min()) - offset;
-    double yMax = ceil(dataNlabel.col(1).max()) + offset;
+    chartResult->addSeries(groupCentroids);
+    chartResult->setTheme(QChart::ChartThemeBlueIcy);
 
     // 创建默认的坐标轴
-    chart->createDefaultAxes();
+    chartResult->createDefaultAxes();
     // 设置坐标轴的范围
-    chart->axisX()->setRange(xMin, xMax);
-    chart->axisY()->setRange(yMin, yMax);
-    chart->setTitle(tr("K Means Cluster"));
+    chartResult->axisX()->setRange(xMin, xMax);
+    chartResult->axisY()->setRange(yMin, yMax);
+    chartResult->setTitle(tr("K Means Cluster"));
     // 启用动画
-    chart->setAnimationOptions(QChart::AllAnimations);
+    chartResult->setAnimationOptions(QChart::AllAnimations);
     // 图例放在下方，图例中的 MakerShape 直接取自图表
-    chart->legend()->setAlignment(Qt::AlignBottom);
-    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-    chart->setGeometry(ui->graphicsView->rect());
+    chartResult->legend()->setAlignment(Qt::AlignBottom);
+    chartResult->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+    chartResult->setGeometry(ui->graphicsView->rect());
 
-    // 创建一个 QGraphicsScene 对象
-    QGraphicsScene *scene = new QGraphicsScene;
+    // 删除之前的 chart
+    scene->removeItem(chart);
     // 将 chart 添加到 scene 中
-    scene->addItem(chart);
+    scene->addItem(chartResult);
     // 连接 UI 中的 QGrapicsView 对象与 scene
     ui->graphicsView->setScene(scene);
 }
