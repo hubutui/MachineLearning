@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QVector>
 #include <QDebug>
 
 #include "mainwindow.h"
@@ -1270,7 +1271,7 @@ void MainWindow::kMeans(const int &N1,
     // 打乱顺序
     dataNlabel = shuffle(dataNlabel);
     // 设置初始的聚类中心
-    mat centroids = dataNlabel.rows(0, k - 1);
+    mat centroids = dataNlabel(span(0, k - 1), span(0, 1));
     //
     const uword maxEpoch = 100;
     for (uword epoch = 0; epoch < maxEpoch; ++epoch) {
@@ -1293,55 +1294,86 @@ void MainWindow::kMeans(const int &N1,
         // 重新计算聚类中心
         // 标签取值为 0, 1, 2，所以只需要找到 label < 0.5, label > 0.5 && label < 1.5 和 label > 1.5
         // 的样本就对了．不能直接使用 == 作为判断条件是因为这是浮点数
-        uvec tmpInd = arma::find(dataNlabel.col(dataNlabel.n_cols - 1) < 0.5f);
-        mat tmpData = dataNlabel(span(0, dataNlabel.n_rows - 1), span(0, 1));
-        centroids(0) = mean(tmpData(tmpInd));
-        tmpInd = arma::find(dataNlabel.col(dataNlabel.n_cols - 1) > 0.5f &&
-                            dataNlabel.col(dataNlabel.n_cols - 1) < 1.5f);
-        centroids(1) = mean(tmpData(tmpInd));
-        tmpInd = arma::find(dataNlabel.col(dataNlabel.n_cols - 1) > 1.5f);
-        centroids(2) = mean(tmpData(tmpInd));
+//        uvec tmpInd = arma::find(dataNlabel.col(dataNlabel.n_cols - 1) < 0.5f);
+//        mat tmpData = dataNlabel(span(0, dataNlabel.n_rows - 1), span(0, 1));
+//        centroids(0) = mean(tmpData(tmpInd));
+//        tmpInd = arma::find(dataNlabel.col(dataNlabel.n_cols - 1) > 0.5f &&
+//                            dataNlabel.col(dataNlabel.n_cols - 1) < 1.5f);
+//        centroids(1) = mean(tmpData(tmpInd));
+//        tmpInd = arma::find(dataNlabel.col(dataNlabel.n_cols - 1) > 1.5f);
+//        centroids(2) = mean(tmpData(tmpInd));
+        for (uword i = 0; i < k; ++i) {
+            const double offset = 0.5;
+            uvec tmpIndRow = arma::find(dataNlabel.col(dataNlabel.n_cols - 1) > i - offset &&
+                                     dataNlabel.col(dataNlabel.n_cols - 1) < i + offset);
+            uvec tmpIndCol = {0, 1};
+            mat tmpData = dataNlabel(span(0, dataNlabel.n_rows - 1), span(0, 1));
+            centroids.row(i) = mean(tmpData.submat(tmpIndRow, tmpIndCol));
+        }
         // 最后再把数据打乱
         dataNlabel = shuffle(dataNlabel);
     }
     // 结果绘图
-    QScatterSeries *group1 = new QScatterSeries;
-    QScatterSeries *group2 = new QScatterSeries;
-    QScatterSeries *group3 = new QScatterSeries;
-    QScatterSeries *groupCentroids = new QScatterSeries;
-    // 读取数据，保存到对应的 series 里
+    QScatterSeries *group[k];
+    // 创建 k 个 group
+    for (uword i = 0; i < k; ++i) {
+        group[i] = new QScatterSeries;
+    }
     for (uword i = 0; i < dataNlabel.n_rows; ++i) {
-        if (static_cast<uword>(dataNlabel(i, dataNlabel.n_cols - 1)) == 0) {
-            group1->append(dataNlabel(i, 0), dataNlabel(i, 1));
-        } else if (static_cast<uword>(dataNlabel(i, dataNlabel.n_cols - 1)) == 1) {
-            group2->append(dataNlabel(i, 0), dataNlabel(i, 1));
-        } else if (static_cast<uword>(dataNlabel(i, dataNlabel.n_cols - 1)) == 2) {
-            group3->append(dataNlabel(i, 0), dataNlabel(i, 1));
-        } else {
-            // something might be wrong, but we don't care
-            // and do nothing
+        for (uword j = 0; j < k; ++j) {
+            if (static_cast<uword>(dataNlabel(i, dataNlabel.n_cols - 1) == j)) {
+                group[j]->append(dataNlabel(i, 0), dataNlabel(i, 1));
+            }
         }
     }
+//    QScatterSeries *group1 = new QScatterSeries;
+//    QScatterSeries *group2 = new QScatterSeries;
+//    QScatterSeries *group3 = new QScatterSeries;
+//    QScatterSeries *groupCentroids = new QScatterSeries;
+//    // 读取数据，保存到对应的 series 里
+//    for (uword i = 0; i < dataNlabel.n_rows; ++i) {
+//        if (static_cast<uword>(dataNlabel(i, dataNlabel.n_cols - 1)) == 0) {
+//            group1->append(dataNlabel(i, 0), dataNlabel(i, 1));
+//        } else if (static_cast<uword>(dataNlabel(i, dataNlabel.n_cols - 1)) == 1) {
+//            group2->append(dataNlabel(i, 0), dataNlabel(i, 1));
+//        } else if (static_cast<uword>(dataNlabel(i, dataNlabel.n_cols - 1)) == 2) {
+//            group3->append(dataNlabel(i, 0), dataNlabel(i, 1));
+//        } else {
+//            // something might be wrong, but we don't care
+//            // and do nothing
+//        }
+//    }
     // 聚类中心
+    QScatterSeries *groupCentroids = new QScatterSeries;
     for (uword i = 0; i < centroids.n_rows; ++i) {
         groupCentroids->append(centroids(i, 0), centroids(i, 1));
     }
-    // 设置颜色
-    group1->setColor(Qt::GlobalColor::red);
-    group2->setColor(Qt::GlobalColor::green);
-    group3->setColor(Qt::GlobalColor::blue);
-    groupCentroids->setColor(Qt::GlobalColor::cyan);
+//    // 设置颜色
+//    group1->setColor(Qt::GlobalColor::red);
+//    group2->setColor(Qt::GlobalColor::green);
+//    group3->setColor(Qt::GlobalColor::blue);
+//    groupCentroids->setColor(Qt::GlobalColor::cyan);
     // 设置名称
-    group1->setName(tr("Group1"));
-    group2->setName(tr("Group2"));
-    group3->setName(tr("Group3"));
+//    group1->setName(tr("Group1"));
+//    group2->setName(tr("Group2"));
+//    group3->setName(tr("Group3"));
+    for (uword i = 0; i < k; ++i) {
+        group[i]->setName(tr("Group%1").arg(i+1));
+    }
     groupCentroids->setName(tr("Centroids"));
+    groupCentroids->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
+    const qreal factor = 1.5f;
+    groupCentroids->setMarkerSize(factor*groupCentroids->markerSize());
 
     QChart *chart = new QChart;
-    chart->addSeries(group1);
-    chart->addSeries(group2);
-    chart->addSeries(group3);
+//    chart->addSeries(group1);
+//    chart->addSeries(group2);
+//    chart->addSeries(group3);
+    for (uword i = 0; i < k; ++i) {
+        chart->addSeries(group[i]);
+    }
     chart->addSeries(groupCentroids);
+    chart->setTheme(QChart::ChartThemeBlueIcy);
     // 绘图的范围
     // 取特征点的最值在往外增加一个 offset
     double offset = 0.3;
