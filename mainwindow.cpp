@@ -1286,7 +1286,7 @@ void MainWindow::kMeans(const int &N1,
     chart->createDefaultAxes();
     chart->axisX()->setRange(xMin, xMax);
     chart->axisY()->setRange(yMin, yMax);
-    chart->setTitle(tr("K Means Cluster - Original Data"));
+    chart->setTitle(tr("K Means Clustering - Original Data"));
     chart->setAnimationOptions(QChart::AllAnimations);
     chart->legend()->setAlignment(Qt::AlignBottom);
     chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
@@ -1302,8 +1302,8 @@ void MainWindow::kMeans(const int &N1,
     const int step = 1;
     const int kDefault = 3;
     uword k = QInputDialog::getInt(this,
-                                 tr("K Means Cluster Setting"),
-                                 tr("Cluster number:"),
+                                 tr("K Means Clustering Setting"),
+                                 tr("Clustering number:"),
                                  kDefault,
                                  kMin,
                                  kMax,
@@ -1343,8 +1343,6 @@ void MainWindow::kMeans(const int &N1,
             mat tmpData = dataNlabel(span(0, dataNlabel.n_rows - 1), span(0, 1));
             centroids.row(i) = mean(tmpData.submat(tmpIndRow, tmpIndCol));
         }
-        // 最后再把数据打乱
-        dataNlabel = shuffle(dataNlabel);
     }
     // 结果绘图
     QScatterSeries *group[k];
